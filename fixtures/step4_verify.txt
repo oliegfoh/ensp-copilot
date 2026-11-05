@@ -1,13 +1,13 @@
 === ISIS PEER ===
-R2 : <R2-NP-38>display isis peer | Peer information for ISIS(1) | System Id     Interface          Circuit Id       State HoldTime Type     PRI | ------------------------------------------------------------------------------- | 0000.0000.0007  GE0/0/3            0000.0000.0002.01 Up   24s      L2       64 | Total Peer(s): 1
-<R2-NP-38>display isis peer
+R2 : <R2-LAB>display isis peer | Peer information for ISIS(1) | System Id     Interface          Circuit Id       State HoldTime Type     PRI | ------------------------------------------------------------------------------- | 0000.0000.0007  GE0/0/3            0000.0000.0002.01 Up   24s      L2       64 | Total Peer(s): 1
+<R2-LAB>display isis peer
 Peer information for ISIS(1)
 System Id     Interface          Circuit Id       State HoldTime Type     PRI
 -------------------------------------------------------------------------------
 0000.0000.0007  GE0/0/3            0000.0000.0002.01 Up   24s      L2       64
 Total Peer(s): 1
-R7 : <R7-NP-38>display isis peer | Peer information for ISIS(1) | System Id     Interface          Circuit Id       State HoldTime Type     PRI | ------------------------------------------------------------------------------- | 0000.0000.0002  GE0/0/0            0000.0000.0002.01 Up   8s       L2       64 | Total Peer(s): 1
-<R7-NP-38>display isis peer
+R7 : <R7-LAB>display isis peer | Peer information for ISIS(1) | System Id     Interface          Circuit Id       State HoldTime Type     PRI | ------------------------------------------------------------------------------- | 0000.0000.0002  GE0/0/0            0000.0000.0002.01 Up   8s       L2       64 | Total Peer(s): 1
+<R7-LAB>display isis peer
 Peer information for ISIS(1)
 System Id     Interface          Circuit Id       State HoldTime Type     PRI
 -------------------------------------------------------------------------------
@@ -15,7 +15,7 @@ System Id     Interface          Circuit Id       State HoldTime Type     PRI
 Total Peer(s): 1
 
 === R2 ISIS ROUTES ===
-<R2-NP-38>display ip routing-table protocol isis
+<R2-LAB>display ip routing-table protocol isis
 Route Flags: R - relay, D - download to fib
 ------------------------------------------------------------------------------
 Public routing table : ISIS
@@ -29,7 +29,7 @@ ISIS routing table status : <Inactive>
 Destinations : 0        Routes : 0
 
 === R7 ISIS INTERFACES ===
-<R7-NP-38>display isis interface
+<R7-LAB>display isis interface
 Interface information for ISIS(1)
 ---------------------------------
 Interface       Id      IPV4.State          IPV6.State      MTU  Type  DIS

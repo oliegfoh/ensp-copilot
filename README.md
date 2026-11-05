@@ -129,6 +129,19 @@ tests/          unittest，23 项
 - **只支持 eNSP**：真机、EVE-NG、GNS3、HCL 不适用
 - **依赖 GUI**：eNSP 主进程必须存活、设备必须已启动，无 headless 模式
 - `com_port` 是 eNSP 未公开字段，版本变动可能失效；兼容性靠自检探测，不靠写死
+- **公开前脱敏**：`fixtures/` 是真实设备回显，可能带班级 / 学号 / 姓名缩写等站点专属设备名。用 `tools/rename_devices.py` 按规则批量替换（见下）
+
+## 公开前脱敏
+
+`fixtures/` 是真实设备回显，可能带班级 / 学号 / 姓名缩写等站点专属设备名。发布前按实际命名规则批量替换：
+
+```bash
+python tools/rename_devices.py --dry-run --map NP-38=LAB   # 预览，不写文件
+python tools/rename_devices.py --map NP-38=LAB             # 执行字面替换
+python tools/rename_devices.py --suffix LAB                # 或把所有 R<n>-<tag> 统一成 R<n>-LAB
+```
+
+规则可叠加、按给定顺序应用；只扫文本类型的资源文件，不碰二进制。替换后建议跑一遍测试确认 fixtures 未被破坏。
 
 ## 测试
 

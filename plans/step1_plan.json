@@ -1,7 +1,7 @@
 {
   "R1": [
     "system-view",
-    "sysname R1-NP-38",
+    "sysname R1-LAB",
     "interface GigabitEthernet0/0/0",
     "ip address 10.0.0.1 30",
     "quit",
@@ -20,7 +20,7 @@
   ],
   "R2": [
     "system-view",
-    "sysname R2-NP-38",
+    "sysname R2-LAB",
     "interface GigabitEthernet0/0/0",
     "ip address 10.0.0.2 30",
     "quit",
@@ -39,7 +39,7 @@
   ],
   "R3": [
     "system-view",
-    "sysname R3-NP-38",
+    "sysname R3-LAB",
     "interface GigabitEthernet0/0/0",
     "ip address 10.0.0.6 30",
     "quit",
@@ -55,7 +55,7 @@
   ],
   "R4": [
     "system-view",
-    "sysname R4-NP-38",
+    "sysname R4-LAB",
     "interface GigabitEthernet0/0/0",
     "ip address 10.0.0.25 30",
     "quit",
@@ -71,7 +71,7 @@
   ],
   "R5": [
     "system-view",
-    "sysname R5-NP-38",
+    "sysname R5-LAB",
     "interface GigabitEthernet0/0/0",
     "ip address 10.0.0.29 30",
     "quit",
@@ -87,7 +87,7 @@
   ],
   "R6": [
     "system-view",
-    "sysname R6-NP-38",
+    "sysname R6-LAB",
     "interface GigabitEthernet0/0/0",
     "ip address 10.0.0.26 30",
     "quit",
@@ -106,7 +106,7 @@
   ],
   "R7": [
     "system-view",
-    "sysname R7-NP-38",
+    "sysname R7-LAB",
     "interface GigabitEthernet0/0/0",
     "ip address 10.0.0.34 30",
     "quit",

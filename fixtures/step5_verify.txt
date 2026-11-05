@@ -3,7 +3,7 @@ R1: peers=2 Established=2
     2.2.2.2         4       65001        2        3     0 00:00:47 Established       0
     3.3.3.3         4       65001        2        3     0 00:00:40 Established       0
 ===== R1 =====
-<R1-NP-38>display bgp peer
+<R1-LAB>display bgp peer
 BGP local router ID : 1.1.1.1
 Local AS number : 65001
 Total number of peers : 2		  Peers in established state : 2
@@ -15,7 +15,7 @@ R2: peers=3 Established=3
     3.3.3.3         4       65001        2        3     0 00:00:42 Established       0
     10.0.0.14       4       65002        2        3     0 00:00:34 Established       0
 ===== R2 =====
-<R2-NP-38>display bgp peer
+<R2-LAB>display bgp peer
 BGP local router ID : 2.2.2.2
 Local AS number : 65001
 Total number of peers : 3		  Peers in established state : 3
@@ -28,7 +28,7 @@ R3: peers=3 Established=3
     2.2.2.2         4       65001        2        2     0 00:00:44 Established       0
     10.0.0.18       4       65002        2        3     0 00:00:28 Established       0
 ===== R3 =====
-<R3-NP-38>display bgp peer
+<R3-LAB>display bgp peer
 BGP local router ID : 3.3.3.3
 Local AS number : 65001
 Total number of peers : 3		  Peers in established state : 3
@@ -41,7 +41,7 @@ R4: peers=3 Established=3
     6.6.6.6         4       65002        2        3     0 00:00:23 Established       0
     10.0.0.13       4       65001        2        2     0 00:00:37 Established       0
 ===== R4 =====
-<R4-NP-38>display bgp peer
+<R4-LAB>display bgp peer
 BGP local router ID : 4.4.4.4
 Local AS number : 65002
 Total number of peers : 3		  Peers in established state : 3
@@ -54,7 +54,7 @@ R5: peers=3 Established=3
     6.6.6.6         4       65002        2        3     0 00:00:25 Established       0
     10.0.0.17       4       65001        2        2     0 00:00:32 Established       0
 ===== R5 =====
-<R5-NP-38>display bgp peer
+<R5-LAB>display bgp peer
 BGP local router ID : 5.5.5.5
 Local AS number : 65002
 Total number of peers : 3		  Peers in established state : 3
@@ -66,7 +66,7 @@ R6: peers=2 Established=2
     4.4.4.4         4       65002        2        2     0 00:00:27 Established       0
     5.5.5.5         4       65002        2        2     0 00:00:27 Established       0
 ===== R6 =====
-<R6-NP-38>display bgp peer
+<R6-LAB>display bgp peer
 BGP local router ID : 6.6.6.6
 Local AS number : 65002
 Total number of peers : 2		  Peers in established state : 2
@@ -75,5 +75,5 @@ Peer            V          AS  MsgRcvd  MsgSent  OutQ  Up/Down       State PrefR
 5.5.5.5         4       65002        2        2     0 00:00:27 Established       0
 
 === BGP ROUTING TABLE (expect empty: no networks advertised yet) ===
-R1 : <R1-NP-38>display bgp routing-table
-R2 : <R2-NP-38>display bgp routing-table
+R1 : <R1-LAB>display bgp routing-table
+R2 : <R2-LAB>display bgp routing-table

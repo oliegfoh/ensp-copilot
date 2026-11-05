@@ -1,11 +1,11 @@
 === SAVE (precise Y/N interaction) ===
-OK  R1 | v  5 2026 18:09:17-08:00 R1-NP-38 %%01CFM/4/SAVE(l)[15]:The user chose Y when deciding whether to save the configuration to the device. | Save the configuration successfully. | <R1-NP-38> | <R1-NP-38>
-OK  R2 | v  5 2026 18:09:23-08:00 R2-NP-38 %%01CFM/4/SAVE(l)[24]:The user chose Y when deciding whether to save the configuration to the device. | Save the configuration successfully. | <R2-NP-38> | <R2-NP-38>
-OK  R3 | ov  5 2026 18:09:30-08:00 R3-NP-38 %%01CFM/4/SAVE(l)[4]:The user chose Y when deciding whether to save the configuration to the device. | Save the configuration successfully. | <R3-NP-38> | <R3-NP-38>
-OK  R4 | v  5 2026 18:09:36-08:00 R4-NP-38 %%01CFM/4/SAVE(l)[38]:The user chose Y when deciding whether to save the configuration to the device. | Save the configuration successfully. | <R4-NP-38> | <R4-NP-38>
-OK  R5 | v  5 2026 18:09:42-08:00 R5-NP-38 %%01CFM/4/SAVE(l)[10]:The user chose Y when deciding whether to save the configuration to the device. | Save the configuration successfully. | <R5-NP-38> | <R5-NP-38>
-OK  R6 | v  5 2026 18:09:48-08:00 R6-NP-38 %%01CFM/4/SAVE(l)[15]:The user chose Y when deciding whether to save the configuration to the device. | Save the configuration successfully. | <R6-NP-38> | <R6-NP-38>
-OK  R7 | ov  5 2026 18:09:55-08:00 R7-NP-38 %%01CFM/4/SAVE(l)[1]:The user chose Y when deciding whether to save the configuration to the device. | Save the configuration successfully. | <R7-NP-38> | <R7-NP-38>
+OK  R1 | v  5 2026 18:09:17-08:00 R1-LAB %%01CFM/4/SAVE(l)[15]:The user chose Y when deciding whether to save the configuration to the device. | Save the configuration successfully. | <R1-LAB> | <R1-LAB>
+OK  R2 | v  5 2026 18:09:23-08:00 R2-LAB %%01CFM/4/SAVE(l)[24]:The user chose Y when deciding whether to save the configuration to the device. | Save the configuration successfully. | <R2-LAB> | <R2-LAB>
+OK  R3 | ov  5 2026 18:09:30-08:00 R3-LAB %%01CFM/4/SAVE(l)[4]:The user chose Y when deciding whether to save the configuration to the device. | Save the configuration successfully. | <R3-LAB> | <R3-LAB>
+OK  R4 | v  5 2026 18:09:36-08:00 R4-LAB %%01CFM/4/SAVE(l)[38]:The user chose Y when deciding whether to save the configuration to the device. | Save the configuration successfully. | <R4-LAB> | <R4-LAB>
+OK  R5 | v  5 2026 18:09:42-08:00 R5-LAB %%01CFM/4/SAVE(l)[10]:The user chose Y when deciding whether to save the configuration to the device. | Save the configuration successfully. | <R5-LAB> | <R5-LAB>
+OK  R6 | v  5 2026 18:09:48-08:00 R6-LAB %%01CFM/4/SAVE(l)[15]:The user chose Y when deciding whether to save the configuration to the device. | Save the configuration successfully. | <R6-LAB> | <R6-LAB>
+OK  R7 | ov  5 2026 18:09:55-08:00 R7-LAB %%01CFM/4/SAVE(l)[1]:The user chose Y when deciding whether to save the configuration to the device. | Save the configuration successfully. | <R7-LAB> | <R7-LAB>
 
 === SAVED CONFIG FILES ON DISK ===
 R1: NO vrpcfg.zip
@@ -17,10 +17,10 @@ R6: NO vrpcfg.zip
 R7: NO vrpcfg.zip
 
 === display saved-configuration (sysname line) ===
-R1 : <R1-NP-38>display saved-configuration | include sysname | sysname R1-NP-38
-R2 : <R2-NP-38>display saved-configuration | include sysname | sysname R2-NP-38
-R3 : <R3-NP-38>display saved-configuration | include sysname | sysname R3-NP-38
-R4 : <R4-NP-38>display saved-configuration | include sysname | sysname R4-NP-38
-R5 : <R5-NP-38>display saved-configuration | include sysname | sysname R5-NP-38
-R6 : <R6-NP-38>display saved-configuration | include sysname | sysname R6-NP-38
-R7 : <R7-NP-38>display saved-configuration | include sysname | sysname R7-NP-38
+R1 : <R1-LAB>display saved-configuration | include sysname | sysname R1-LAB
+R2 : <R2-LAB>display saved-configuration | include sysname | sysname R2-LAB
+R3 : <R3-LAB>display saved-configuration | include sysname | sysname R3-LAB
+R4 : <R4-LAB>display saved-configuration | include sysname | sysname R4-LAB
+R5 : <R5-LAB>display saved-configuration | include sysname | sysname R5-LAB
+R6 : <R6-LAB>display saved-configuration | include sysname | sysname R6-LAB
+R7 : <R7-LAB>display saved-configuration | include sysname | sysname R7-LAB
