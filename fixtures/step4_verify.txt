@@ -1,0 +1,47 @@
+=== ISIS PEER ===
+R2 : <R2-NP-38>display isis peer | Peer information for ISIS(1) | System Id     Interface          Circuit Id       State HoldTime Type     PRI | ------------------------------------------------------------------------------- | 0000.0000.0007  GE0/0/3            0000.0000.0002.01 Up   24s      L2       64 | Total Peer(s): 1
+<R2-NP-38>display isis peer
+Peer information for ISIS(1)
+System Id     Interface          Circuit Id       State HoldTime Type     PRI
+-------------------------------------------------------------------------------
+0000.0000.0007  GE0/0/3            0000.0000.0002.01 Up   24s      L2       64
+Total Peer(s): 1
+R7 : <R7-NP-38>display isis peer | Peer information for ISIS(1) | System Id     Interface          Circuit Id       State HoldTime Type     PRI | ------------------------------------------------------------------------------- | 0000.0000.0002  GE0/0/0            0000.0000.0002.01 Up   8s       L2       64 | Total Peer(s): 1
+<R7-NP-38>display isis peer
+Peer information for ISIS(1)
+System Id     Interface          Circuit Id       State HoldTime Type     PRI
+-------------------------------------------------------------------------------
+0000.0000.0002  GE0/0/0            0000.0000.0002.01 Up   8s       L2       64
+Total Peer(s): 1
+
+=== R2 ISIS ROUTES ===
+<R2-NP-38>display ip routing-table protocol isis
+Route Flags: R - relay, D - download to fib
+------------------------------------------------------------------------------
+Public routing table : ISIS
+Destinations : 2        Routes : 2
+ISIS routing table status : <Active>
+Destinations : 2        Routes : 2
+Destination/Mask    Proto   Pre  Cost      Flags NextHop         Interface
+192.16.2.0/24  ISIS-L2 15   10          D   10.0.0.34       GigabitEthernet0/0/3
+192.168.2.0/24  ISIS-L2 15   10          D   10.0.0.34       GigabitEthernet0/0/3
+ISIS routing table status : <Inactive>
+Destinations : 0        Routes : 0
+
+=== R7 ISIS INTERFACES ===
+<R7-NP-38>display isis interface
+Interface information for ISIS(1)
+---------------------------------
+Interface       Id      IPV4.State          IPV6.State      MTU  Type  DIS
+GE0/0/0         001         Up                 Down         1497 L1/L2 No/No
+Loop1           001         Up                 Down         1500 L1/L2 --
+Loop2           002         Up                 Down         1500 L1/L2 --
+
+=== REACHABILITY ===
+REACHABLE   R2 -> 10.0.0.34
+REACHABLE   R2 -> 192.168.2.1
+REACHABLE   R2 -> 192.16.2.1
+UNREACHABLE R1 -> 192.168.2.1
+
+=== OSPF UNAFFECTED (R2) ===
+R2 Full peers=2

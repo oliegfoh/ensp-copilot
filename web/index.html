@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ensp-copilot</title>
+<style>
+  :root { --line: #e3e3e0; --muted: #6b6b66; --blue: #185fa5; --blue-bg: #e6f1fb; --ok: #3b6d11; --bad: #a32d2d; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; font: 13px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1a1a19; background: #fff; }
+  h1 { font-size: 18px; font-weight: 500; margin: 0 0 4px; }
+  h2 { font-size: 14px; font-weight: 500; margin: 24px 0 10px; }
+  p.hint { color: var(--muted); margin: 0 0 18px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .card { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: #fff; }
+  .card.active { border: 2px solid var(--blue); padding: 11px 13px; }
+  .card .name { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+  .card .meta, .card .fp { color: var(--muted); font-size: 12px; }
+  .card img { width: 100%; display: block; background: #fff; border-radius: 8px; margin: 8px 0; }
+  button { font: inherit; border: 1px solid var(--line); border-radius: 8px; padding: 5px 12px; background: #fff; cursor: pointer; }
+  button:hover { background: var(--blue-bg); }
+  button.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  ul.checks { list-style: none; padding: 0; margin: 8px 0 0; }
+  ul.checks li { padding: 2px 0; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .tab { padding: 4px 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+  .tab.on { background: var(--blue-bg); border-color: var(--blue); }
+  pre#console { height: 320px; overflow: auto; background: #f7f7f5; border: 1px solid var(--line); border-radius: 8px; padding: 12px; font: 12px/1.5 Consolas, Menlo, monospace; white-space: pre-wrap; }
+  input[type=text], select { font: inherit; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+  label { color: var(--muted); }
+  .plan { margin-top: 8px; max-height: 180px; overflow: auto; background: #f7f7f5; border-radius: 8px; padding: 10px; font: 12px/1.5 Consolas, monospace; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>ensp-copilot</h1>
+<p class="hint">本地运行 · 只连接本机的 eNSP · 实线设备可 CLI 操作，虚线灰显为 GUI 专用</p>
+
+<h2>1. 选择拓扑方案</h2>
+<div class="cards" id="cards">加载中…</div>
+
+<h2>2. 环境自检</h2>
+<div class="row">
+  <button id="check">运行自检</button>
+  <span id="checkHint" class="hint">双击 .topo 用 eNSP 打开 → 全选设备启动 → 不要打开任何设备 CLI 窗口</span>
+</div>
+<ul class="checks" id="checks"></ul>
+
+<h2>3. 实时控制台</h2>
+<div class="tabs" id="tabs"></div>
+<pre id="console">选择设备后，命令与设备回显会实时出现在这里。</pre>
+<div class="row" style="margin-top:8px">
+  <input type="text" id="cmd" size="52" placeholder="display ip interface brief" disabled>
+  <button class="primary" id="send" disabled>执行</button>
+  <label><input type="checkbox" id="write"> 允许写命令</label>
+  <label><input type="checkbox" id="confirm"> 已确认危险命令</label>
+</div>
+
+<h2>4. 计划（plan）</h2>
+<div class="row">
+  <select id="plans"><option value="">选择 plan…</option></select>
+  <button id="preview">预览</button>
+  <button id="apply">应用</button>
+</div>
+<div class="plan" id="planBody">dry-run：先预览，再决定是否应用。</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let selected = null, source = null, current = '';
+
+async function loadCards() {
+  const list = await (await fetch('/api/topologies')).json();
+  $('cards').innerHTML = '';
+  list.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `<div class="name">${t.name}</div>
+      <div class="meta">${t.devices} 台设备 · ${t.links} 条链路 · ${t.manageable} 台可操作</div>
+      <img src="${t.preview}" alt="拓扑预览">
+      <div class="fp">指纹 ${t.fingerprint}</div>
+      <div style="margin-top:8px"><button>选用</button></div>`;
+    div.querySelector('button').onclick = () => {
+      document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+      div.classList.add('active');
+      selected = t;
+      $('checkHint').textContent = `已选 ${t.name} —— 请确认 eNSP 打开的是同一个 .topo`;
+    };
+    $('cards').appendChild(div);
+  });
+}
+
+async function runCheck() {
+  if (!selected) { alert('先选一个拓扑'); return; }
+  const r = await (await fetch(`/api/status?topo=${encodeURIComponent(selected.name)}&fingerprint=${selected.fingerprint}`)).json();
+  $('checks').innerHTML = r.checks.map(c =>
+    `<li class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✗'} ${c.name} — ${c.detail || ''}</li>`).join('');
+  const names = r.reachable || [];
+  $('tabs').innerHTML = names.map(n => `<span class="tab" data-n="${n}">${n}</span>`).join('');
+  document.querySelectorAll('.tab').forEach(t => t.onclick = () => openStream(t.dataset.n));
+  if (names.length) openStream(names[0]);
+}
+
+function append(text, device) {
+  const pre = $('console');
+  pre.textContent += (device ? `[${device}] ` : '') + text;
+  pre.scrollTop = pre.scrollHeight;
+}
+
+function openStream(device) {
+  if (source) source.close();
+  current = device;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.n === device));
+  $('console').textContent = '';
+  $('cmd').disabled = false; $('send').disabled = false;
+  source = new EventSource(`/events?topo=${encodeURIComponent(selected.name)}&device=${encodeURIComponent(device)}`);
+  source.onmessage = e => {
+    try { const d = JSON.parse(e.data); append(d.text, d.device); }
+    catch (_) { append(e.data, device); }
+  };
+  append('--- 已连接实时回显 ---\n', device);
+}
+
+async function sendCommand() {
+  const cmd = $('cmd').value.trim();
+  if (!cmd || !current || !selected) return;
+  const r = await fetch('/api/command', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({topo: selected.name, device: current, command: cmd,
+                          allow_write: $('write').checked, confirmed: $('confirm').checked})
+  }).then(x => x.json());
+  if (r.problems) append('\n[拦截] ' + r.problems.join('; ') + '\n', current);
+  if (r.error) append('\n[错误] ' + r.error + '\n', current);
+}
+
+async function loadPlans() {
+  const list = await (await fetch('/api/plans')).json();
+  $('plans').innerHTML = '<option value="">选择 plan…</option>' +
+    list.map(n => `<option value="${n}">${n}</option>`).join('');
+}
+
+async function previewPlan() {
+  const name = $('plans').value;
+  if (!name) return;
+  const p = await (await fetch(`/api/plan?name=${encodeURIComponent(name)}`)).json();
+  $('planBody').textContent = JSON.stringify(p, null, 2);
+}
+
+async function applyPlan() {
+  const name = $('plans').value;
+  if (!name || !selected) { alert('先选拓扑和 plan'); return; }
+  const dry = $('planBody').textContent;
+  if (!confirm('确认下发该 plan 到真实设备？\n\n' + dry.slice(0, 400))) return;
+  const r = await fetch('/api/plan', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({topo: selected.name, name,
+                          allow_write: $('write').checked, confirmed: $('confirm').checked})
+  }).then(x => x.json());
+  $('planBody').textContent = JSON.stringify(r, null, 2);
+}
+
+$('check').onclick = runCheck;
+$('send').onclick = sendCommand;
+$('cmd').onkeydown = e => { if (e.key === 'Enter') sendCommand(); };
+$('preview').onclick = previewPlan;
+$('apply').onclick = applyPlan;
+loadCards(); loadPlans();
+</script>
+</body>
+</html>

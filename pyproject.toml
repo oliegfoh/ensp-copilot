@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ensp-copilot"
+version = "0.1.0"
+description = "Auditable local automation for Huawei eNSP labs, with a live console window"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = []
+
+[project.scripts]
+ensp-copilot = "ensp_copilot.server:main"
+
+[tool.setuptools.packages.find]
+include = ["ensp_copilot*"]
+
+[tool.setuptools.package-data]
+ensp_copilot = ["../web/*", "../topologies/*", "../plans/*"]
