@@ -128,15 +128,8 @@ button{cursor:pointer}
 .hero{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .hero h1{font-size:20px;font-weight:600;margin:0 0 3px}
 .hero p{margin:0;color:var(--muted);font-size:13px}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
-.stat{background:var(--surface-2);border-radius:11px;padding:13px}
-.stat b{display:block;font-size:24px;line-height:1.2;color:var(--accent)}
-.stat span{font-size:11.5px;color:var(--muted)}
 .preview-box{background:var(--surface-2);border-radius:11px;padding:12px;text-align:center}
 .preview-box img{max-width:100%;max-height:330px;display:block;margin:0 auto}
-.guide{margin-top:14px;padding:10px 14px;border-left:3px solid var(--accent);
-  background:var(--accent-soft);border-radius:0 10px 10px 0;font-size:12px;color:var(--muted)}
-.guide b{color:var(--accent)}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .tab{padding:5px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;
   font-size:12px;background:var(--surface)}
@@ -152,21 +145,6 @@ input[type=text]:focus,select:focus{border-color:var(--accent)}
 .grow{flex:1;min-width:180px}
 label.chk{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer}
 .hint{font-size:11.5px;color:var(--muted)}
-.planlist{border:1px solid var(--border);border-radius:11px;overflow:auto;max-height:300px;margin:12px 0}
-.prow{display:grid;grid-template-columns:20px 92px 1fr;gap:8px;align-items:center;
-  padding:6px 11px;border-bottom:1px solid var(--border);font-size:12px}
-.prow:last-child{border-bottom:none}
-.prow code{font:12px Consolas,monospace;white-space:pre-wrap;word-break:break-all}
-.pdev{color:var(--muted);font-size:11.5px}
-.pstat{width:9px;height:9px;border-radius:50%;background:var(--border)}
-.pstat[data-s="run"]{background:var(--warn);animation:pulse 1s infinite}
-.pstat[data-s="ok"]{background:var(--ok)}
-.pstat[data-s="bad"]{background:var(--bad)}
-.prow.cur{background:var(--accent-soft)}
-.bar{height:6px;background:var(--surface-2);border-radius:20px;overflow:hidden;margin:8px 0}
-.bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
-pre.planlog{height:170px;overflow:auto;background:var(--code-bg);border:1px solid var(--border);
-  border-radius:11px;padding:11px;font:12px/1.5 Consolas,monospace;white-space:pre-wrap;word-break:break-all}
 .toast{position:fixed;right:22px;bottom:22px;z-index:50;padding:10px 16px;border-radius:10px;
   background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);
   font-size:12.5px;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none}
@@ -217,21 +195,14 @@ pre.planlog{height:170px;overflow:auto;background:var(--code-bg);border:1px soli
       <div class="mtabs">
         <button class="mtab on" data-v="overview">概览</button>
         <button class="mtab" data-v="console">实时控制台</button>
-        <button class="mtab" data-v="plan">Plan 执行</button>
       </div>
 
       <section class="panel view on" id="v-overview">
         <div class="hero">
-          <div><h1 id="ovName">未选择拓扑</h1><p id="ovHint">—</p></div>
+          <div><h1 id="ovName">未选择拓扑</h1></div>
           <span class="badge no" id="ovBadge">未就绪</span>
         </div>
-        <div class="stats">
-          <div class="stat"><b id="stDev">0</b><span>设备总数</span></div>
-          <div class="stat"><b id="stLink">0</b><span>链路</span></div>
-          <div class="stat"><b id="stMgr">0</b><span>可 CLI 操作</span></div>
-        </div>
         <div class="preview-box"><img id="ovImg" alt="拓扑预览" style="display:none"><div class="hint" id="ovEmpty">暂无预览</div></div>
-        <div class="guide"><b>①</b> eNSP 打开 .topo → 全选启动　<b>②</b> 勿开设备 CLI 窗口（单会话会抢占）</div>
       </section>
 
       <section class="panel view" id="v-console">
@@ -251,20 +222,6 @@ pre.planlog{height:170px;overflow:auto;background:var(--code-bg);border:1px soli
           <label class="chk"><input type="checkbox" id="confirm"> 已确认危险命令</label>
         </div>
       </section>
-
-      <section class="panel view" id="v-plan">
-        <div class="row">
-          <select id="plans"><option value="">选择 plan…</option></select>
-          <button class="btn" id="preview">预览</button>
-          <button class="btn primary" id="runPlan" disabled>逐条执行</button>
-          <button class="btn danger" id="stopPlan" disabled>停止</button>
-          <span class="hint" id="progressText">0 / 0</span>
-        </div>
-        <div class="bar"><i id="progress"></i></div>
-        <div class="planlist" id="planList"><div class="hint" style="padding:12px">—</div></div>
-        <div class="sec" style="margin-top:12px">实时回显</div>
-        <pre class="planlog" id="planLog">—</pre>
-      </section>
     </main>
   </div>
 </div>
@@ -277,7 +234,6 @@ const CLIENT_ID = Math.random().toString(36).slice(2) + Date.now().toString(36);
 const PLACEHOLDER = '等待回显…';
 const BUF_LIMIT = 30000;
 let selected = null, inventory = null, current = '';
-let planRows = [], stopFlag = false;
 const buffers = {};
 
 const PRESETS = ['#4f6bed','#8257d6','#0f9d76','#d4880b','#db4a6b','#475569'];
@@ -362,8 +318,7 @@ async function loadCards(prefer){
 }
 function clearSelection(){
   selected = null; inventory = null; current = '';
-  $('ovName').textContent = '未选择拓扑'; $('ovHint').textContent = '—';
-  $('stDev').textContent = '0'; $('stLink').textContent = '0'; $('stMgr').textContent = '0';
+  $('ovName').textContent = '未选择拓扑';
   $('ovBadge').textContent = '未就绪'; $('ovBadge').className = 'badge no';
   $('ovImg').style.display = 'none'; $('ovEmpty').style.display = 'block';
   $('devices').innerHTML = ''; $('devCount').textContent = '0';
@@ -394,10 +349,6 @@ async function selectTopo(name){
 function renderOverview(){
   if (!selected || !inventory) return;
   $('ovName').textContent = selected.name;
-  $('ovHint').textContent = '指纹 ' + selected.fingerprint;
-  $('stDev').textContent = inventory.devices;
-  $('stLink').textContent = inventory.links;
-  $('stMgr').textContent = inventory.manageable;
   $('ovBadge').textContent = inventory.manageable + ' 台可操作';
   $('ovBadge').className = 'badge ' + (inventory.manageable ? 'ok' : 'no');
   $('ovImg').src = pv(selected.preview); $('ovImg').style.display = 'block'; $('ovEmpty').style.display = 'none';
@@ -570,66 +521,6 @@ function initUpload(){
   drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); uploadFile(e.dataTransfer.files[0]); };
 }
 
-async function loadPlans(){
-  const list = await api('/api/plans');
-  $('plans').innerHTML = '<option value="">选择 plan…</option>' +
-    list.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
-}
-async function previewPlan(){
-  const name = $('plans').value;
-  if (!name) return;
-  const planData = await api('/api/plan?name=' + encodeURIComponent(name));
-  planRows = [];
-  Object.entries(planData).forEach(([dev, cmds]) => cmds.forEach(c => planRows.push({device:dev, cmd:c})));
-  $('planList').innerHTML = planRows.map((r,i) => `
-    <div class="prow" id="prow${i}">
-      <span class="pstat" data-s="wait"></span>
-      <span class="pdev">${esc(aliasOf(r.device))}</span>
-      <code>${esc(r.cmd)}</code>
-    </div>`).join('') || '<div class="hint" style="padding:12px">空计划</div>';
-  $('progress').style.width = '0%';
-  $('progressText').textContent = '0 / ' + planRows.length;
-  $('runPlan').disabled = !planRows.length;
-  $('planLog').textContent = '共 ' + planRows.length + ' 条';
-}
-function setRow(i, state){
-  const el = $('prow'+i); if (!el) return;
-  el.querySelector('.pstat').dataset.s = state;
-  el.classList.toggle('cur', state === 'run');
-  if (state === 'run') el.scrollIntoView({block:'nearest'});
-}
-function appendPlanLog(text){
-  const p = $('planLog');
-  if (p.textContent === '—') p.textContent = '';
-  p.textContent += text; p.scrollTop = p.scrollHeight;
-}
-async function runPlan(){
-  if (!selected || !planRows.length) return;
-  if (!confirm('下发 ' + planRows.length + ' 条命令？')) return;
-  stopFlag = false; $('runPlan').disabled = true; $('stopPlan').disabled = false;
-  $('planLog').textContent = '';
-  const allow = $('write').checked, conf = $('confirm').checked;
-  let done = 0, failed = null;
-  for (let i=0; i<planRows.length; i++){
-    if (stopFlag) { appendPlanLog('\n[已停止]\n'); break; }
-    const row = planRows[i];
-    setRow(i, 'run');
-    appendPlanLog(`\n> [${aliasOf(row.device)}] ${row.cmd}\n`);
-    let r;
-    try { r = await command({device:row.device, command:row.cmd, allow_write:allow, confirmed:conf}); }
-    catch(e) { r = {error:String(e)}; }
-    const bad = !!(r.problems || r.error || /Error:|Unrecognized|Wrong parameter/.test(r.output||''));
-    setRow(i, bad ? 'bad' : 'ok');
-    appendPlanLog((r.output || (r.problems && r.problems.join('; ')) || r.error || '(无回显)') + '\n');
-    done++;
-    $('progress').style.width = (done/planRows.length*100) + '%';
-    $('progressText').textContent = done + ' / ' + planRows.length;
-    if (bad) { failed = row.cmd; appendPlanLog('\n[失败即停]\n'); break; }
-  }
-  $('runPlan').disabled = false; $('stopPlan').disabled = true;
-  toast(failed ? '已停止：' + failed : (stopFlag ? '已停止' : '执行完成'), failed ? 'bad' : 'ok');
-}
-
 function initTabs(){
   document.querySelectorAll('.mtab').forEach(b => b.onclick = () => switchView(b.dataset.v));
   $('fsize').onchange = e => $('console').style.fontSize = e.target.value + 'px';
@@ -638,14 +529,10 @@ function initTabs(){
   $('send').onclick = sendCommand;
   $('cmd').onkeydown = e => { if (e.key === 'Enter') sendCommand(); };
   $('check').onclick = runCheck;
-  $('preview').onclick = previewPlan;
-  $('runPlan').onclick = runPlan;
-  $('stopPlan').onclick = () => { stopFlag = true; };
-  $('plans').onchange = previewPlan;
 }
 
 initTheme(); initTabs(); initUpload(); initActiveStream();
-loadCards(); loadPlans();
+loadCards();
 </script>
 </body>
 </html>

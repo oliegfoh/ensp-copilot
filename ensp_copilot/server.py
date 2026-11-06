@@ -24,7 +24,6 @@ from .topo import parse_topo
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
 TOPO_DIR = ROOT / "topologies"
-PLAN_DIR = ROOT / "plans"
 
 TOPOLOGIES: dict = {}
 ACTIVE = Hub()          # one global stream: activity notices + bytes of every device
@@ -175,14 +174,6 @@ class Handler(BaseHTTPRequestHandler):
                     report.checks.append(env.Check(
                         f"{dev.name} CLI 握手", False, str(exc)))
             self._json(report.as_dict())
-        elif path == "/api/plans":
-            self._json(sorted(p.stem for p in PLAN_DIR.glob("*.json")))
-        elif path == "/api/plan":
-            name = q.get("name", [""])[0]
-            file = PLAN_DIR / f"{name}.json"
-            if not file.is_file():
-                return self._json({"error": "unknown plan"}, 404)
-            self._json(safety.load_plan(file))
         elif path == "/events":
             self._stream(q)
         elif path == "/events/active":
@@ -258,8 +249,6 @@ class Handler(BaseHTTPRequestHandler):
             return self._upload(body)
         if path == "/api/command":
             return self._command(body)
-        if path == "/api/plan":
-            return self._apply_plan(body)
         return self._json({"error": "not found"}, 404)
 
     def do_DELETE(self):
@@ -340,42 +329,13 @@ class Handler(BaseHTTPRequestHandler):
         except OSError as exc:
             return self._json({"error": str(exc)}, 503)
 
-    def _apply_plan(self, body):
-        t = _get_topo(body.get("topo", ""))
-        if not t:
-            return self._json({"error": "unknown topology"}, 404)
-        file = PLAN_DIR / f"{body.get('name','')}.json"
-        if not file.is_file():
-            return self._json({"error": "unknown plan"}, 404)
-        plan = safety.load_plan(file)
-        problems = safety.validate_plan(
-            plan, set(t.by_name),
-            allow_write=bool(body.get("allow_write")),
-            confirmed=bool(body.get("confirmed")),
-        )
-        if problems:
-            return self._json({"problems": problems}, 403)
-        results = {}
-        with LOCK:
-            for name, commands in plan.items():
-                dev = t.by_name[name]
-                session = MANAGER.get(dev)
-                for c in commands:
-                    announce(body.get("topo", ""), name, c,
-                             source=str(body.get("source", "agent")),
-                             client=str(body.get("client", "")))
-                    results.setdefault(name, []).append((c, session.execute(c, wait=1.2)))
-        return self._json({"applied": results})
-
-
 def main():
     ap = argparse.ArgumentParser(description="ensp-copilot local server")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--topo-dir", type=pathlib.Path, default=TOPO_DIR)
     args = ap.parse_args()
-    global TOPOLOGIES, PLAN_DIR
+    global TOPOLOGIES
     TOPOLOGIES = load_topologies(args.topo_dir)
-    PLAN_DIR = ROOT / "plans"
     print(f"loaded {len(TOPOLOGIES)} topologies, serving http://127.0.0.1:{args.port}")
     print("requires eNSP running on THIS host with devices started")
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
