@@ -3,167 +3,553 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ensp-copilot</title>
+<title>ensp-copilot · 本地实验执行器</title>
 <style>
-  :root { --line: #e3e3e0; --muted: #6b6b66; --blue: #185fa5; --blue-bg: #e6f1fb; --ok: #3b6d11; --bad: #a32d2d; }
-  * { box-sizing: border-box; }
-  body { margin: 0; padding: 24px; font: 13px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1a1a19; background: #fff; }
-  h1 { font-size: 18px; font-weight: 500; margin: 0 0 4px; }
-  h2 { font-size: 14px; font-weight: 500; margin: 24px 0 10px; }
-  p.hint { color: var(--muted); margin: 0 0 18px; }
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-  .card { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: #fff; }
-  .card.active { border: 2px solid var(--blue); padding: 11px 13px; }
-  .card .name { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
-  .card .meta, .card .fp { color: var(--muted); font-size: 12px; }
-  .card img { width: 100%; display: block; background: #fff; border-radius: 8px; margin: 8px 0; }
-  button { font: inherit; border: 1px solid var(--line); border-radius: 8px; padding: 5px 12px; background: #fff; cursor: pointer; }
-  button:hover { background: var(--blue-bg); }
-  button.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
-  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  ul.checks { list-style: none; padding: 0; margin: 8px 0 0; }
-  ul.checks li { padding: 2px 0; }
-  .ok { color: var(--ok); } .bad { color: var(--bad); }
-  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-  .tab { padding: 4px 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
-  .tab.on { background: var(--blue-bg); border-color: var(--blue); }
-  pre#console { height: 320px; overflow: auto; background: #f7f7f5; border: 1px solid var(--line); border-radius: 8px; padding: 12px; font: 12px/1.5 Consolas, Menlo, monospace; white-space: pre-wrap; }
-  input[type=text], select { font: inherit; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
-  label { color: var(--muted); }
-  .plan { margin-top: 8px; max-height: 180px; overflow: auto; background: #f7f7f5; border-radius: 8px; padding: 10px; font: 12px/1.5 Consolas, monospace; white-space: pre-wrap; }
+:root{
+  --accent:#4f6bed; --accent-soft:#eef1ff;
+  --bg:#f5f7fb; --surface:#fff; --surface-2:#f0f3f9;
+  --text:#1a2030; --muted:#6c7587; --border:#e2e7f0;
+  --ok:#169c6a; --warn:#d4880b; --bad:#d0453f;
+  --code-bg:#f7f9fd;
+  --radius:14px; --shadow:0 1px 2px rgba(20,30,60,.05),0 8px 24px rgba(20,30,60,.04);
+  --cat-router:#4f6bed; --cat-switch:#0f9d76; --cat-firewall:#e06c3a;
+  --cat-wireless:#8257d6; --cat-pc:#d49a12; --cat-server:#64748b; --cat-cloud:#64748b; --cat-unknown:#94a3b8;
+}
+html[data-mode="dark"]{
+  --bg:#12151d; --surface:#1a1f2a; --surface-2:#222836;
+  --text:#e7ebf4; --muted:#98a3b8; --border:#2e3646;
+  --code-bg:#131721;
+  --shadow:0 1px 2px rgba(0,0,0,.25),0 8px 24px rgba(0,0,0,.18);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.6 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+  transition:background .2s,color .2s}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.app{min-height:100vh;display:flex;flex-direction:column}
+.topbar{height:64px;display:flex;align-items:center;gap:16px;padding:0 22px;
+  background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+.brand{display:flex;align-items:center;gap:10px;min-width:210px}
+.logo{width:32px;height:32px;border-radius:9px;background:var(--accent);color:#fff;
+  display:grid;place-items:center;font-size:17px;font-weight:600;flex:none}
+.brand b{font-size:15px;font-weight:600;display:block;line-height:1.2}
+.brand small{font-size:11px;color:var(--muted)}
+.health{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 18%,transparent)}
+.dot.off{background:var(--bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--bad) 18%,transparent)}
+.spacer{flex:1}
+.theme{display:flex;align-items:center;gap:8px}
+.swatches{display:flex;gap:5px}
+.sw{width:20px;height:20px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+.sw.on{border-color:var(--text);transform:scale(1.12)}
+#accent{width:28px;height:26px;border:1px solid var(--border);border-radius:7px;background:none;padding:1px;cursor:pointer}
+.icon-btn{border:1px solid var(--border);background:var(--surface);border-radius:8px;
+  width:30px;height:28px;display:grid;place-items:center;font-size:14px;color:var(--muted)}
+.icon-btn:hover{color:var(--accent);border-color:var(--accent)}
+.layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px;
+  padding:18px 22px 32px;max-width:1680px;width:100%;margin:0 auto}
+.sidebar{display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;box-shadow:var(--shadow)}
+.sec{display:flex;align-items:center;justify-content:space-between;
+  font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--muted);
+  text-transform:uppercase;margin:0 0 12px}
+.count{font-weight:500;color:var(--accent);background:var(--accent-soft);
+  border-radius:20px;padding:1px 8px;font-size:11px}
+.cards{display:flex;flex-direction:column;gap:9px;max-height:290px;overflow:auto}
+.tcard{border:1px solid var(--border);border-radius:11px;padding:10px;cursor:pointer;
+  background:var(--surface);transition:border-color .15s,transform .15s}
+.tcard:hover{border-color:var(--accent);transform:translateY(-1px)}
+.tcard.on{border:2px solid var(--accent);padding:9px;background:var(--accent-soft)}
+.tcard .tname{font-weight:600;font-size:13px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tcard .tmeta{font-size:11px;color:var(--muted)}
+.tcard img{width:100%;height:72px;object-fit:contain;display:block;margin:7px 0 4px;
+  background:var(--surface-2);border-radius:7px}
+.tcard .tfp{font-size:10px;color:var(--muted);font-family:Consolas,monospace}
+.drop{margin-top:10px;border:1.5px dashed var(--border);border-radius:11px;padding:14px 10px;
+  text-align:center;color:var(--muted);font-size:12px;transition:all .15s}
+.drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.drop .plus{font-size:20px;line-height:1;color:var(--accent);margin-bottom:4px}
+.drop small{display:block;font-size:11px;opacity:.75;margin-top:5px}
+.link{background:none;border:none;color:var(--accent);text-decoration:underline;padding:0;font-size:12px}
+.devices{display:flex;flex-direction:column;gap:7px;max-height:330px;overflow:auto}
+.dev{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:10px;
+  background:var(--surface-2);border:1px solid transparent}
+.dev.manageable{border-color:color-mix(in srgb,var(--ok) 22%,transparent)}
+.dev:not(.manageable){opacity:.62}
+.dev-ico{width:28px;height:28px;flex:none;border-radius:50%;display:grid;place-items:center;
+  font-size:12px;font-weight:600;background:var(--accent-soft);color:var(--accent)}
+.dev-ico[data-shape="square"]{border-radius:7px}
+.dev-ico[data-shape="pill"]{border-radius:14px;width:32px}
+.dev-main{min-width:0;flex:1}
+.dev-alias{width:100%;border:none;background:transparent;font-size:12.5px;font-weight:600;
+  padding:0;outline:none;border-bottom:1px solid transparent}
+.dev-alias:focus{border-bottom-color:var(--accent)}
+.dev-meta{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{font-size:10px;padding:1px 7px;border-radius:20px;white-space:nowrap;font-weight:600}
+.badge.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.badge.no{background:var(--surface);color:var(--muted);border:1px solid var(--border)}
+.btn{border:1px solid var(--border);background:var(--surface);border-radius:9px;
+  padding:7px 13px;font-size:12.5px;transition:all .15s;white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08);color:#fff}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.wide{width:100%}
+.checks{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-direction:column;gap:3px;
+  max-height:220px;overflow:auto;font-size:11.5px}
+.checks li{padding:2px 0;color:var(--muted)}
+.checks li.ok{color:var(--ok)} .checks li.bad{color:var(--bad)}
+.main{min-width:0;display:flex;flex-direction:column;gap:14px}
+.mtabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:5px;box-shadow:var(--shadow)}
+.mtab{flex:1;border:none;background:transparent;border-radius:9px;padding:9px 12px;
+  font-size:13px;color:var(--muted);font-weight:500;transition:all .15s}
+.mtab:hover{color:var(--text)}
+.mtab.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.view{display:none} .view.on{display:block}
+.hero{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.hero h1{font-size:20px;font-weight:600;margin:0 0 3px}
+.hero p{margin:0;color:var(--muted);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.stat{background:var(--surface-2);border-radius:11px;padding:13px}
+.stat b{display:block;font-size:24px;line-height:1.2;color:var(--accent)}
+.stat span{font-size:11.5px;color:var(--muted)}
+.preview-box{background:var(--surface-2);border-radius:11px;padding:12px;text-align:center}
+.preview-box img{max-width:100%;max-height:330px;display:block;margin:0 auto}
+.guide{margin-top:14px;padding:12px 14px;border-left:3px solid var(--accent);
+  background:var(--accent-soft);border-radius:0 10px 10px 0;font-size:12.5px}
+.guide b{color:var(--accent)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tab{padding:5px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;
+  font-size:12px;background:var(--surface)}
+.tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+pre.console{height:360px;overflow:auto;background:var(--code-bg);border:1px solid var(--border);
+  border-radius:11px;padding:13px;color:var(--text);
+  font:12.5px/1.55 Consolas,"Cascadia Code",Menlo,monospace;white-space:pre-wrap;word-break:break-all}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.tight{margin-top:10px}
+input[type=text],select{border:1px solid var(--border);border-radius:9px;padding:7px 11px;
+  background:var(--surface);outline:none}
+input[type=text]:focus,select:focus{border-color:var(--accent)}
+.grow{flex:1;min-width:180px}
+label.chk{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer}
+.hint{font-size:11.5px;color:var(--muted)}
+.planlist{border:1px solid var(--border);border-radius:11px;overflow:auto;max-height:300px;margin:12px 0}
+.prow{display:grid;grid-template-columns:20px 92px 1fr;gap:8px;align-items:center;
+  padding:6px 11px;border-bottom:1px solid var(--border);font-size:12px}
+.prow:last-child{border-bottom:none}
+.prow code{font:12px Consolas,monospace;white-space:pre-wrap;word-break:break-all}
+.pdev{color:var(--muted);font-size:11.5px}
+.pstat{width:9px;height:9px;border-radius:50%;background:var(--border)}
+.pstat[data-s="run"]{background:var(--warn);animation:pulse 1s infinite}
+.pstat[data-s="ok"]{background:var(--ok)}
+.pstat[data-s="bad"]{background:var(--bad)}
+@keyframes pulse{50%{opacity:.3}}
+.prow.cur{background:var(--accent-soft)}
+.bar{height:6px;background:var(--surface-2);border-radius:20px;overflow:hidden;margin:8px 0}
+.bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+pre.planlog{height:170px;overflow:auto;background:var(--code-bg);border:1px solid var(--border);
+  border-radius:11px;padding:11px;font:12px/1.5 Consolas,monospace;white-space:pre-wrap;word-break:break-all}
+.toast{position:fixed;right:22px;bottom:22px;z-index:50;padding:10px 16px;border-radius:10px;
+  background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);
+  font-size:12.5px;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+.toast.ok{border-color:var(--ok);color:var(--ok)} .toast.bad{border-color:var(--bad);color:var(--bad)}
+@media(max-width:980px){.layout{grid-template-columns:1fr}.brand{min-width:0}.health{display:none}}
 </style>
 </head>
-<body>
-<h1>ensp-copilot</h1>
-<p class="hint">本地运行 · 只连接本机的 eNSP · 实线设备可 CLI 操作，虚线灰显为 GUI 专用</p>
+<body data-mode="light">
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="logo">◈</div><div><b>ensp-copilot</b><small>本地实验执行器 · 可审计</small></div></div>
+    <div class="health"><span class="dot" id="dot"></span><span id="healthText">服务在线</span></div>
+    <div class="spacer"></div>
+    <div class="theme">
+      <div class="swatches" id="swatches"></div>
+      <input type="color" id="accent" title="自定义主色">
+      <button class="icon-btn" id="mode" title="切换深浅">◐</button>
+      <button class="icon-btn" id="resetTheme" title="恢复默认">↺</button>
+    </div>
+  </header>
 
-<h2>1. 选择拓扑方案</h2>
-<div class="cards" id="cards">加载中…</div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="panel">
+        <div class="sec">拓扑方案 <span class="count" id="topoCount">0</span></div>
+        <div class="cards" id="cards"></div>
+        <div class="drop" id="drop">
+          <input type="file" id="file" accept=".topo" hidden>
+          <div class="plus">＋</div>
+          <div>拖入 .topo，或 <button class="link" id="pick">选择文件</button></div>
+          <small>自动识别设备、型号、Console 端口并生成清单</small>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="sec">设备清单 <span class="count" id="devCount">0</span></div>
+        <div class="devices" id="devices"></div>
+      </div>
+      <div class="panel">
+        <div class="sec">环境自检</div>
+        <button class="btn wide" id="check">运行自检</button>
+        <div class="hint" style="margin-top:7px">真实 CLI 握手，7 台约 15 秒</div>
+        <ul class="checks" id="checks"></ul>
+      </div>
+    </aside>
 
-<h2>2. 环境自检</h2>
-<div class="row">
-  <button id="check">运行自检</button>
-  <span id="checkHint" class="hint">双击 .topo 用 eNSP 打开 → 全选设备启动 → 不要打开任何设备 CLI 窗口</span>
+    <main class="main">
+      <div class="mtabs">
+        <button class="mtab on" data-v="overview">概览</button>
+        <button class="mtab" data-v="console">实时控制台</button>
+        <button class="mtab" data-v="plan">Plan 执行</button>
+      </div>
+
+      <section class="panel view on" id="v-overview">
+        <div class="hero">
+          <div><h1 id="ovName">未选择拓扑</h1><p id="ovHint">从左侧选一个方案，或上传自己的 .topo</p></div>
+          <span class="badge no" id="ovBadge">未就绪</span>
+        </div>
+        <div class="stats">
+          <div class="stat"><b id="stDev">0</b><span>设备总数</span></div>
+          <div class="stat"><b id="stLink">0</b><span>链路</span></div>
+          <div class="stat"><b id="stMgr">0</b><span>可 CLI 操作</span></div>
+        </div>
+        <div class="preview-box"><img id="ovImg" alt="拓扑预览" style="display:none"><div class="hint" id="ovEmpty">暂无预览</div></div>
+        <div class="guide"><b>用户只做两步：</b>双击 .topo 用 eNSP 打开 → 全选设备启动。之后提要求、看实时回显即可。<br><b>别双击设备 CLI 窗口</b>：Console 单会话，会抢占连接。</div>
+      </section>
+
+      <section class="panel view" id="v-console">
+        <div class="tabs" id="tabs"></div>
+        <pre class="console" id="console">选择设备后，命令与设备真实回显会实时出现在这里。</pre>
+        <div class="row tight">
+          <button class="btn" id="clear">清屏</button>
+          <label class="chk"><input type="checkbox" id="autoScroll" checked> 自动滚动</label>
+          <label class="chk"><input type="checkbox" id="pause"> 暂停</label>
+          <span class="hint">字号</span>
+          <select id="fsize"><option>11</option><option selected>12.5</option><option>14</option><option>16</option></select>
+        </div>
+        <div class="row tight">
+          <input type="text" class="grow" id="cmd" placeholder="display ip interface brief" disabled>
+          <button class="btn primary" id="send" disabled>执行</button>
+          <label class="chk"><input type="checkbox" id="write"> 允许写命令</label>
+          <label class="chk"><input type="checkbox" id="confirm"> 已确认危险命令</label>
+        </div>
+      </section>
+
+      <section class="panel view" id="v-plan">
+        <div class="row">
+          <select id="plans"><option value="">选择 plan…</option></select>
+          <button class="btn" id="preview">预览</button>
+          <button class="btn primary" id="runPlan" disabled>逐条执行</button>
+          <button class="btn danger" id="stopPlan" disabled>停止</button>
+          <span class="hint" id="progressText">0 / 0</span>
+        </div>
+        <div class="hint" style="margin-top:8px">逐条下发、失败即停；执行前请确认已勾选相应的写权限。下方回显与实时控制台来自同一根连接。</div>
+        <div class="bar"><i id="progress"></i></div>
+        <div class="planlist" id="planList"><div class="hint" style="padding:12px">先选 plan 并预览，命令清单会显示在这里。</div></div>
+        <div class="sec" style="margin-top:12px">实时回显</div>
+        <pre class="planlog" id="planLog">等待执行…</pre>
+      </section>
+    </main>
+  </div>
 </div>
-<ul class="checks" id="checks"></ul>
-
-<h2>3. 实时控制台</h2>
-<div class="tabs" id="tabs"></div>
-<pre id="console">选择设备后，命令与设备回显会实时出现在这里。</pre>
-<div class="row" style="margin-top:8px">
-  <input type="text" id="cmd" size="52" placeholder="display ip interface brief" disabled>
-  <button class="primary" id="send" disabled>执行</button>
-  <label><input type="checkbox" id="write"> 允许写命令</label>
-  <label><input type="checkbox" id="confirm"> 已确认危险命令</label>
-</div>
-
-<h2>4. 计划（plan）</h2>
-<div class="row">
-  <select id="plans"><option value="">选择 plan…</option></select>
-  <button id="preview">预览</button>
-  <button id="apply">应用</button>
-</div>
-<div class="plan" id="planBody">dry-run：先预览，再决定是否应用。</div>
+<div class="toast" id="toast"></div>
 
 <script>
 const $ = id => document.getElementById(id);
-let selected = null, source = null, current = '';
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+let selected = null, inventory = null, source = null, current = '';
+let planData = null, planRows = [], stopFlag = false;
 
-async function loadCards() {
-  const list = await (await fetch('/api/topologies')).json();
-  $('cards').innerHTML = '';
-  list.forEach(t => {
-    const div = document.createElement('div');
-    div.className = 'card';
-    div.innerHTML = `<div class="name">${t.name}</div>
-      <div class="meta">${t.devices} 台设备 · ${t.links} 条链路 · ${t.manageable} 台可操作</div>
-      <img src="${t.preview}" alt="拓扑预览">
-      <div class="fp">指纹 ${t.fingerprint}</div>
-      <div style="margin-top:8px"><button>选用</button></div>`;
-    div.querySelector('button').onclick = () => {
-      document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
-      div.classList.add('active');
-      selected = t;
-      $('checkHint').textContent = `已选 ${t.name} —— 请确认 eNSP 打开的是同一个 .topo`;
+const PRESETS = ['#4f6bed','#8257d6','#0f9d76','#d4880b','#db4a6b','#475569'];
+const THEME_KEY = 'ensp.theme.v2';
+const ICON = {router:'R',switch:'S',firewall:'F',wireless:'W',pc:'P',server:'V',cloud:'C',unknown:'?'};
+const SHAPE = {router:'round',switch:'square',firewall:'square',wireless:'round',pc:'square',server:'pill',cloud:'pill',unknown:'round'};
+const CATVAR = {router:'--cat-router',switch:'--cat-switch',firewall:'--cat-firewall',wireless:'--cat-wireless',pc:'--cat-pc',server:'--cat-server',cloud:'--cat-cloud',unknown:'--cat-unknown'};
+
+function loadTheme(){
+  try { return Object.assign({accent:PRESETS[0],mode:'light'}, JSON.parse(localStorage.getItem(THEME_KEY)||'{}')); }
+  catch(_) { return {accent:PRESETS[0],mode:'light'}; }
+}
+function tint(hex, base, f){
+  const h = hex.replace('#','');
+  const c = [0,2,4].map(i => parseInt(h.slice(i,i+2),16));
+  const b = [1,3,5].map(i => parseInt(base.slice(i,i+2),16));
+  return '#' + c.map((v,i) => Math.round(v*f + b[i]*(1-f)).toString(16).padStart(2,'0')).join('');
+}
+function pv(base){
+  return base + (loadTheme().mode === 'dark' ? '&dark=1' : '&dark=0');
+}
+function applyTheme(){
+  const t = loadTheme();
+  document.documentElement.dataset.mode = t.mode;
+  document.documentElement.style.setProperty('--accent', t.accent);
+  const base = t.mode === 'dark' ? '#1a1f2a' : '#ffffff';
+  document.documentElement.style.setProperty('--accent-soft', tint(t.accent, base, .13));
+  $('accent').value = t.accent;
+  document.querySelectorAll('.sw').forEach(s => s.classList.toggle('on', s.dataset.c === t.accent));
+  document.querySelectorAll('.tcard img').forEach(img => {
+    const u = (img.getAttribute('src') || '').split('&dark=')[0];
+    if (u) img.src = pv(u);
+  });
+  if (selected) $('ovImg').src = pv(selected.preview);
+}
+function saveTheme(patch){
+  localStorage.setItem(THEME_KEY, JSON.stringify(Object.assign(loadTheme(), patch)));
+  applyTheme();
+}
+function initTheme(){
+  const q = new URLSearchParams(location.search);
+  const qa = q.get('accent'), qm = q.get('mode');
+  if (qa && /^#[0-9a-fA-F]{6}$/.test(qa)) saveTheme({accent:qa});
+  if (qm === 'dark' || qm === 'light') saveTheme({mode:qm});
+  $('swatches').innerHTML = PRESETS.map(c =>
+    `<button class="sw" data-c="${c}" style="background:${c}" title="${c}"></button>`).join('');
+  document.querySelectorAll('.sw').forEach(s => s.onclick = () => saveTheme({accent:s.dataset.c}));
+  $('accent').oninput = e => saveTheme({accent:e.target.value});
+  $('mode').onclick = () => saveTheme({mode: loadTheme().mode === 'dark' ? 'light' : 'dark'});
+  $('resetTheme').onclick = () => { localStorage.removeItem(THEME_KEY); applyTheme(); toast('主题已恢复默认'); };
+  applyTheme();
+}
+
+let toastTimer = null;
+function toast(msg, kind){
+  const el = $('toast');
+  el.textContent = msg; el.className = 'toast show ' + (kind||'');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.className = 'toast', 2600);
+}
+async function api(path, opts){ const r = await fetch(path, opts); return r.json(); }
+function aliasKey(name){ return 'ensp.alias.' + (selected ? selected.fingerprint : '') + '.' + name; }
+function aliasOf(name){ return localStorage.getItem(aliasKey(name)) || name; }
+
+async function loadCards(prefer){
+  let list;
+  try { list = await api('/api/topologies'); }
+  catch(e){ $('dot').className = 'dot off'; $('healthText').textContent = '服务不可达'; return; }
+  $('dot').className = 'dot'; $('healthText').textContent = '服务在线';
+  $('topoCount').textContent = list.length;
+  $('cards').innerHTML = list.map(t => `
+    <div class="tcard" data-n="${esc(t.name)}">
+      <div class="tname">${esc(t.name)}</div>
+      <div class="tmeta">${t.devices} 台设备 · ${t.links} 条链路 · ${t.manageable} 可操作</div>
+      <img src="${pv(t.preview)}" alt="预览">
+      <div class="tfp">指纹 ${t.fingerprint}</div>
+    </div>`).join('') || '<div class="hint">还没有拓扑，上传一个 .topo 吧</div>';
+  document.querySelectorAll('.tcard').forEach(c => c.onclick = () => selectTopo(c.dataset.n));
+  const pick = prefer || (selected && selected.name) || (list[0] && list[0].name);
+  if (pick) selectTopo(pick);
+}
+
+async function selectTopo(name){
+  const list = await api('/api/topologies');
+  const t = list.find(x => x.name === name);
+  if (!t) return;
+  selected = t;
+  document.querySelectorAll('.tcard').forEach(c => c.classList.toggle('on', c.dataset.n === name));
+  inventory = await api('/api/devices?topo=' + encodeURIComponent(name));
+  renderOverview(); renderDevices(); renderTabs();
+  if (current) openStream(current);
+}
+
+function renderOverview(){
+  if (!selected || !inventory) return;
+  $('ovName').textContent = selected.name;
+  $('ovHint').textContent = '指纹 ' + selected.fingerprint + ' · 请确认 eNSP 打开的是同一个 .topo';
+  $('stDev').textContent = inventory.devices;
+  $('stLink').textContent = inventory.links;
+  $('stMgr').textContent = inventory.manageable;
+  $('ovBadge').textContent = inventory.manageable + ' 台可操作';
+  $('ovBadge').className = 'badge ' + (inventory.manageable ? 'ok' : 'no');
+  $('ovImg').src = pv(selected.preview); $('ovImg').style.display = 'block'; $('ovEmpty').style.display = 'none';
+}
+
+function renderDevices(){
+  if (!inventory) return;
+  $('devCount').textContent = inventory.devices;
+  $('devices').innerHTML = sortedRows().map(d => {
+    const cat = d.category || 'unknown';
+    const varName = CATVAR[cat] || '--cat-unknown';
+    const shape = SHAPE[cat] || 'round';
+    const display = aliasOf(d.name);
+    return `<div class="dev ${d.manageable ? 'manageable' : ''}" data-name="${esc(d.name)}">
+      <div class="dev-ico" data-shape="${shape}" style="background:color-mix(in srgb,var(${varName}) 14%,var(--surface));color:var(${varName})">${ICON[cat] || '?'}</div>
+      <div class="dev-main">
+        <input class="dev-alias" value="${esc(display)}" title="点击可改名（仅本地显示名）">
+        <div class="dev-meta">${esc(d.label)} · ${esc(d.model)} · ${d.port ? ':'+d.port : '无 Console'}</div>
+      </div>
+      <span class="badge ${d.manageable ? 'ok' : 'no'}">${d.manageable ? 'CLI' : 'GUI'}</span>
+    </div>`;
+  }).join('') || '<div class="hint">未识别到设备</div>';
+  document.querySelectorAll('.dev').forEach(el => {
+    el.querySelector('.dev-alias').onchange = e => {
+      localStorage.setItem(aliasKey(el.dataset.name), e.target.value.trim() || el.dataset.name);
+      renderDevices(); renderTabs(); toast('显示名已保存（仅本地）');
     };
-    $('cards').appendChild(div);
   });
 }
 
-async function runCheck() {
-  if (!selected) { alert('先选一个拓扑'); return; }
-  const r = await (await fetch(`/api/status?topo=${encodeURIComponent(selected.name)}&fingerprint=${selected.fingerprint}`)).json();
-  $('checks').innerHTML = r.checks.map(c =>
-    `<li class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✗'} ${c.name} — ${c.detail || ''}</li>`).join('');
-  const names = r.reachable || [];
-  $('tabs').innerHTML = names.map(n => `<span class="tab" data-n="${n}">${n}</span>`).join('');
+function sortedRows(){
+  if (!inventory) return [];
+  return inventory.rows.slice().sort((a,b) =>
+    String(a.name).localeCompare(String(b.name), undefined, {numeric:true}));
+}
+function manageableNames(){
+  return sortedRows().filter(d => d.manageable).map(d => d.name);
+}
+function renderTabs(){
+  const names = manageableNames();
+  $('tabs').innerHTML = names.map(n =>
+    `<span class="tab ${n===current?'on':''}" data-n="${esc(n)}">${esc(aliasOf(n))}</span>`).join('');
   document.querySelectorAll('.tab').forEach(t => t.onclick = () => openStream(t.dataset.n));
-  if (names.length) openStream(names[0]);
+  $('cmd').disabled = !current; $('send').disabled = !current;
 }
-
-function append(text, device) {
-  const pre = $('console');
-  pre.textContent += (device ? `[${device}] ` : '') + text;
-  pre.scrollTop = pre.scrollHeight;
+function appendConsole(text){
+  if ($('pause').checked) return;
+  const p = $('console'); p.textContent += text;
+  if ($('autoScroll').checked) p.scrollTop = p.scrollHeight;
 }
-
-function openStream(device) {
+function openStream(device){
+  if (!selected) return;
   if (source) source.close();
-  current = device;
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.n === device));
-  $('console').textContent = '';
-  $('cmd').disabled = false; $('send').disabled = false;
+  current = device; renderTabs();
+  if ($('console').textContent.indexOf('选择设备后') === 0) $('console').textContent = '';
   source = new EventSource(`/events?topo=${encodeURIComponent(selected.name)}&device=${encodeURIComponent(device)}`);
   source.onmessage = e => {
-    try { const d = JSON.parse(e.data); append(d.text, d.device); }
-    catch (_) { append(e.data, device); }
+    try { const d = JSON.parse(e.data); appendConsole(d.text); }
+    catch(_) { appendConsole(e.data); }
   };
-  append('--- 已连接实时回显 ---\n', device);
+  source.onerror = () => appendConsole('\n[实时连接断开：设备是否还在？是否被 CLI 窗口抢占？]\n');
+  appendConsole('--- 已连接 ' + aliasOf(device) + ' 实时回显 ---\n');
 }
 
-async function sendCommand() {
+async function sendCommand(){
   const cmd = $('cmd').value.trim();
   if (!cmd || !current || !selected) return;
-  const r = await fetch('/api/command', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({topo: selected.name, device: current, command: cmd,
-                          allow_write: $('write').checked, confirmed: $('confirm').checked})
-  }).then(x => x.json());
-  if (r.problems) append('\n[拦截] ' + r.problems.join('; ') + '\n', current);
-  if (r.error) append('\n[错误] ' + r.error + '\n', current);
+  const r = await api('/api/command', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({topo:selected.name, device:current, command:cmd,
+      allow_write:$('write').checked, confirmed:$('confirm').checked})
+  });
+  if (r.problems) appendConsole('\n[拦截] ' + r.problems.join('; ') + '\n');
+  if (r.error) appendConsole('\n[错误] ' + r.error + '\n');
 }
 
-async function loadPlans() {
-  const list = await (await fetch('/api/plans')).json();
+async function runCheck(){
+  if (!selected) { toast('先选一个拓扑', 'bad'); return; }
+  $('check').disabled = true; $('check').textContent = '自检中…';
+  $('checks').innerHTML = '<li>正在逐台做真实 CLI 握手，请稍候…</li>';
+  try {
+    const r = await api(`/api/status?topo=${encodeURIComponent(selected.name)}&fingerprint=${encodeURIComponent(selected.fingerprint)}`);
+    $('checks').innerHTML = r.checks.map(c =>
+      `<li class="${c.ok?'ok':'bad'}">${c.ok?'✓':'✗'} ${esc(c.name)} — ${esc(c.detail||'')}</li>`).join('');
+    toast(r.ready ? '自检全绿，设备可控' : '自检未通过，请看左侧明细', r.ready ? 'ok' : 'bad');
+  } catch(e) { $('checks').innerHTML = '<li class="bad">自检请求失败</li>'; }
+  $('check').disabled = false; $('check').textContent = '运行自检';
+}
+
+async function uploadFile(file){
+  if (!file) return;
+  const text = await file.text();
+  const r = await api('/api/upload', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name:file.name, content:text})
+  });
+  if (r.error) { toast(r.error, 'bad'); return; }
+  await loadCards(r.name);
+  toast(`已识别 ${r.devices} 台设备，其中 ${r.manageable} 台可 CLI 操作`, 'ok');
+}
+function initUpload(){
+  const drop = $('drop');
+  $('pick').onclick = () => $('file').click();
+  $('file').onchange = e => { uploadFile(e.target.files[0]); e.target.value = ''; };
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+  drop.ondragleave = () => drop.classList.remove('over');
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); uploadFile(e.dataTransfer.files[0]); };
+}
+
+async function loadPlans(){
+  const list = await api('/api/plans');
   $('plans').innerHTML = '<option value="">选择 plan…</option>' +
-    list.map(n => `<option value="${n}">${n}</option>`).join('');
+    list.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
 }
-
-async function previewPlan() {
+async function previewPlan(){
   const name = $('plans').value;
   if (!name) return;
-  const p = await (await fetch(`/api/plan?name=${encodeURIComponent(name)}`)).json();
-  $('planBody').textContent = JSON.stringify(p, null, 2);
+  planData = await api('/api/plan?name=' + encodeURIComponent(name));
+  planRows = [];
+  Object.entries(planData).forEach(([dev, cmds]) => cmds.forEach(c => planRows.push({device:dev, cmd:c})));
+  $('planList').innerHTML = planRows.map((r,i) => `
+    <div class="prow" id="prow${i}">
+      <span class="pstat" data-s="wait"></span>
+      <span class="pdev">${esc(aliasOf(r.device))}</span>
+      <code>${esc(r.cmd)}</code>
+    </div>`).join('') || '<div class="hint" style="padding:12px">空计划</div>';
+  $('progress').style.width = '0%';
+  $('progressText').textContent = '0 / ' + planRows.length;
+  $('runPlan').disabled = !planRows.length;
+  $('planLog').textContent = '预览完成，共 ' + planRows.length + ' 条命令。点「逐条执行」开始。';
+}
+function setRow(i, state){
+  const el = $('prow'+i); if (!el) return;
+  el.querySelector('.pstat').dataset.s = state;
+  el.classList.toggle('cur', state === 'run');
+  if (state === 'run') el.scrollIntoView({block:'nearest'});
+}
+function appendPlanLog(text){
+  const p = $('planLog'); p.textContent += text; p.scrollTop = p.scrollHeight;
+}
+async function runPlan(){
+  if (!selected || !planRows.length) return;
+  if (!confirm('即将把 ' + planRows.length + ' 条命令逐条下发到真实设备。\n确认继续？')) return;
+  stopFlag = false; $('runPlan').disabled = true; $('stopPlan').disabled = false;
+  $('planLog').textContent = '';
+  const allow = $('write').checked, conf = $('confirm').checked;
+  let done = 0, failed = null;
+  for (let i=0; i<planRows.length; i++){
+    if (stopFlag) { appendPlanLog('\n[已手动停止]\n'); break; }
+    const row = planRows[i];
+    setRow(i, 'run');
+    appendPlanLog(`\n> [${aliasOf(row.device)}] ${row.cmd}\n`);
+    let r;
+    try {
+      r = await api('/api/command', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({topo:selected.name, device:row.device, command:row.cmd,
+          allow_write:allow, confirmed:conf})
+      });
+    } catch(e) { r = {error:String(e)}; }
+    const bad = !!(r.problems || r.error || /Error:|Unrecognized|Wrong parameter/.test(r.output||''));
+    setRow(i, bad ? 'bad' : 'ok');
+    appendPlanLog((r.output || (r.problems && r.problems.join('; ')) || r.error || '(无回显)') + '\n');
+    done++;
+    $('progress').style.width = (done/planRows.length*100) + '%';
+    $('progressText').textContent = done + ' / ' + planRows.length;
+    if (bad) { failed = row.cmd; appendPlanLog('\n[失败即停] 后续命令未下发\n'); break; }
+  }
+  $('runPlan').disabled = false; $('stopPlan').disabled = true;
+  toast(failed ? '已停止：' + failed : (stopFlag ? '已手动停止' : '执行完成'), failed ? 'bad' : 'ok');
 }
 
-async function applyPlan() {
-  const name = $('plans').value;
-  if (!name || !selected) { alert('先选拓扑和 plan'); return; }
-  const dry = $('planBody').textContent;
-  if (!confirm('确认下发该 plan 到真实设备？\n\n' + dry.slice(0, 400))) return;
-  const r = await fetch('/api/plan', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({topo: selected.name, name,
-                          allow_write: $('write').checked, confirmed: $('confirm').checked})
-  }).then(x => x.json());
-  $('planBody').textContent = JSON.stringify(r, null, 2);
+function initTabs(){
+  document.querySelectorAll('.mtab').forEach(b => b.onclick = () => {
+    document.querySelectorAll('.mtab').forEach(x => x.classList.toggle('on', x === b));
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + b.dataset.v));
+    if (b.dataset.v === 'console') appendConsole('');
+  });
+  $('fsize').onchange = e => $('console').style.fontSize = e.target.value + 'px';
+  $('clear').onclick = () => $('console').textContent = '';
+  $('send').onclick = sendCommand;
+  $('cmd').onkeydown = e => { if (e.key === 'Enter') sendCommand(); };
+  $('check').onclick = runCheck;
+  $('preview').onclick = previewPlan;
+  $('runPlan').onclick = runPlan;
+  $('stopPlan').onclick = () => { stopFlag = true; };
+  $('plans').onchange = previewPlan;
 }
 
-$('check').onclick = runCheck;
-$('send').onclick = sendCommand;
-$('cmd').onkeydown = e => { if (e.key === 'Enter') sendCommand(); };
-$('preview').onclick = previewPlan;
-$('apply').onclick = applyPlan;
+initTheme(); initTabs(); initUpload();
 loadCards(); loadPlans();
 </script>
 </body>

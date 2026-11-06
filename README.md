@@ -34,7 +34,9 @@ eNSP 没有开放 API，设备 CLI 是内嵌窗口。让 AI「代敲命令」很
 1. 挑一个 `.topo` 方案（或放自己的），**双击用 eNSP 打开**
 2. **全选设备 → 启动**，等 1–3 分钟，直到自检向导全绿
 
-之后：提要求 → 预览 plan → 点「执行」→ 实时看命令与回显。
+也可直接把 `.topo` 拖进界面上传区，自动识别设备、型号、Console 端口并生成清单（显示名仅本地保存）。
+
+之后：提要求 → 预览 plan → 点「逐条执行」→ 实时看每条命令的状态与回显。
 
 两个必须遵守的前提：
 
@@ -70,7 +72,7 @@ python -m ensp_copilot.server --port 8765
 2. 全部设备已启动完成（AR 约 1–3 分钟）
 3. 没有其他程序占用设备 Console
 
-页面提供：拓扑候选卡片（含离线 SVG 预览、设备类型与可操作性标识）、环境自检、实时回显、plan 预览。
+页面提供：拓扑候选卡片（含离线 SVG 预览）、拖拽上传 `.topo`、自动生成设备清单、主色 / 深浅主题自定义、环境自检、实时控制台、Plan 逐条执行视图。主题可用 URL 参数分享：`?mode=dark&accent=%238257d6`。
 
 ## 核心设计：一个会话，多个订阅者
 
@@ -88,10 +90,11 @@ eNSP device ─── Session ─ Hub ─┼─ 命令执行器（临时订阅 +
 
 | 状态 | 能力 |
 |---|---|
-| ✅ 已实现 | `.topo` 解析与设备分类；离线 SVG 渲染；唯一会话 + tee 广播；SSE 实时窗口；环境自检与指纹比对；只读白名单 / 危险命令确认 / plan 校验 / 基线 diff；交互式 `save` |
-| ✅ 已实现 | 5 份真实实验 plan（IP 编址 / OSPF / cost / IS-IS / BGP）可直接回放；23 个基于 fixtures 的单测，CI 不需要 eNSP |
+| ✅ 已实现 | `.topo` 解析与设备分类；离线 SVG 渲染（浅/深色）；唯一会话 + tee 广播；SSE 实时窗口；环境自检与真实 CLI 握手 + 指纹比对；只读白名单 / 危险命令确认 / plan 校验 / 基线 diff；交互式 `save` |
+| ✅ 已实现 | **GUI 拖拽上传 `.topo`**：自动识别设备、型号、Console 端口并生成清单，显示名可本地修改；主色 / 深浅主题自定义 |
+| ✅ 已实现 | **Plan 逐条执行视图**：逐条下发、进度与实时回显、失败即停；5 份真实实验 plan；29 个基于 fixtures 的单测，CI 不需要 eNSP |
 | 🔧 规划中 | 按自然语言需求**生成多个 `.topo` 候选**（当前只提供 1 份示例拓扑 + 渲染器） |
-| 🔧 规划中 | plan 逐步验证 / 失败即停 / 基线回滚；MCP adapter；`xterm.js` 终端渲染 |
+| 🔧 规划中 | 基线 diff 自动回滚（目前只有辅助函数）；MCP adapter；`xterm.js` 终端渲染 |
 
 上表刻意区分现状与规划——README 不替未完成的功能吹牛。
 
@@ -106,12 +109,12 @@ ensp_copilot/
   env.py        自检：端口扫描 + CLI 握手 + 指纹比对
   safety.py     只读白名单、危险命令确认、plan 校验、基线 diff
   server.py     stdlib HTTP + SSE，零依赖本地窗口
-web/            单页界面（候选卡片 / 自检 / 实时回显 / plan 预览）
+web/            单页 GUI（上传 / 设备清单 / 主题 / 实时控制台 / Plan 逐条执行）
 plans/          5 份真实实验配置
 fixtures/       真实设备回显，用于无 eNSP 的测试
 topologies/     示例 .topo
 docs/           架构、踩坑知识库、项目故事与对外文案
-tests/          unittest，23 项
+tests/          unittest，29 项
 ```
 
 ## 真实实验背书
@@ -149,7 +152,17 @@ python tools/rename_devices.py --suffix LAB                # 或把所有 R<n>-<
 python -m unittest discover -s tests -v
 ```
 
-23 项全部基于 `fixtures/`，无需 eNSP、无需网络。
+29 项全部基于 `fixtures/`，无需 eNSP、无需网络。
+
+## 路线图
+
+- [x] P0 核心库拆分 + fixtures 单测
+- [x] P1 `.topo` → SVG 渲染 + 候选卡片 + 自检向导
+- [x] P2 常驻会话 tee + SSE 实时窗口 + 真实 CLI 握手
+- [x] P3a GUI 升级：上传 `.topo` 自动识别设备、主题自定义、Plan 逐条执行 / 失败即停
+- [ ] P3b 基线自动 diff 与一键回滚
+- [ ] P4 可选 MCP adapter（约 100 行，不进核心）
+- [ ] P4 `xterm.js` 终端渲染（当前用 `<pre>`）
 
 ## 文档
 

@@ -45,6 +45,33 @@ def _get_topo(name: str):
     return TOPOLOGIES.get(name)
 
 
+def device_rows(topo) -> list[dict]:
+    """Device inventory for the GUI: identity, type and whether we can drive it."""
+    return [
+        {
+            "name": d.name,
+            "model": d.model,
+            "category": d.category,
+            "label": d.label,
+            "port": d.port,
+            "manageable": d.manageable,
+        }
+        for d in topo.devices
+    ]
+
+
+def topo_summary(name: str, topo) -> dict:
+    return {
+        "name": name,
+        "fingerprint": topo.fingerprint(),
+        "devices": len(topo.devices),
+        "links": len(topo.links),
+        "manageable": len(topo.manageable_devices),
+        "rows": device_rows(topo),
+        "preview": f"/api/render?topo={name}",
+    }
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -87,12 +114,19 @@ class Handler(BaseHTTPRequestHandler):
                 }
                 for name, t in TOPOLOGIES.items()
             ])
+        elif path == "/api/devices":
+            name = q.get("topo", [""])[0]
+            t = _get_topo(name)
+            if not t:
+                return self._json({"error": "unknown topology"}, 404)
+            self._json(topo_summary(name, t))
         elif path == "/api/render":
             name = q.get("topo", [""])[0]
             t = _get_topo(name)
             if not t:
                 return self._json({"error": "unknown topology"}, 404)
-            self._send(render_svg(t).encode("utf-8"), "image/svg+xml; charset=utf-8")
+            dark = q.get("dark", ["0"])[0].lower() in ("1", "true", "yes")
+            self._send(render_svg(t, dark=dark).encode("utf-8"), "image/svg+xml; charset=utf-8")
         elif path == "/api/status":
             name = q.get("topo", [""])[0]
             t = _get_topo(name)
@@ -171,11 +205,35 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(length) or b"{}")
         except json.JSONDecodeError:
             return self._json({"error": "invalid JSON"}, 400)
-        if urlparse(self.path).path == "/api/command":
+        path = urlparse(self.path).path
+        if path == "/api/upload":
+            return self._upload(body)
+        if path == "/api/command":
             return self._command(body)
-        if urlparse(self.path).path == "/api/plan":
+        if path == "/api/plan":
             return self._apply_plan(body)
         return self._json({"error": "not found"}, 404)
+
+    def _upload(self, body):
+        """Accept a .topo as text, store it, and return the parsed inventory."""
+        content = body.get("content", "")
+        if not isinstance(content, str) or "<dev " not in content:
+            return self._json({"error": "不是有效的 .topo：缺少 <dev> 标签"}, 400)
+        raw = pathlib.Path(str(body.get("name", ""))).stem
+        stem = re.sub(r"[^A-Za-z0-9_-]", "-", raw).strip("-")[:64] or "uploaded-topo"
+        target = TOPO_DIR / f"{stem}.topo"
+        try:
+            target.write_text(content, encoding="utf-8")
+            topo = parse_topo(target)
+        except (OSError, ValueError) as exc:
+            return self._json({"error": f"写入或解析失败: {exc}"}, 400)
+        if not topo.devices:
+            target.unlink(missing_ok=True)
+            return self._json({"error": "未解析到任何设备"}, 400)
+        TOPOLOGIES[stem] = topo
+        print(f"[upload] {stem}: {len(topo.devices)} devices, "
+              f"{len(topo.manageable_devices)} manageable")
+        return self._json(topo_summary(stem, topo))
 
     def _command(self, body):
         t = _get_topo(body.get("topo", ""))
