@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ensp-copilot · 本地实验执行器</title>
+<title>ensp-copilot</title>
 <style>
 :root{
   --accent:#4f6bed; --accent-soft:#eef1ff;
@@ -30,15 +30,20 @@ button{cursor:pointer}
 .app{min-height:100vh;display:flex;flex-direction:column}
 .topbar{height:64px;display:flex;align-items:center;gap:16px;padding:0 22px;
   background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
-.brand{display:flex;align-items:center;gap:10px;min-width:210px}
+.brand{display:flex;align-items:center;gap:10px;min-width:170px}
 .logo{width:32px;height:32px;border-radius:9px;background:var(--accent);color:#fff;
   display:grid;place-items:center;font-size:17px;font-weight:600;flex:none}
-.brand b{font-size:15px;font-weight:600;display:block;line-height:1.2}
-.brand small{font-size:11px;color:var(--muted)}
+.brand b{font-size:15px;font-weight:600;line-height:1.2}
 .health{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 18%,transparent)}
 .dot.off{background:var(--bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--bad) 18%,transparent)}
 .spacer{flex:1}
+.now{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);
+  max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now b{color:var(--accent);font-weight:600}
+.now.live .pulse{background:var(--ok);animation:pulse 1.2s infinite}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--border);flex:none}
+@keyframes pulse{50%{opacity:.25}}
 .theme{display:flex;align-items:center;gap:8px}
 .swatches{display:flex;gap:5px}
 .sw{width:20px;height:20px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
@@ -71,13 +76,13 @@ button{cursor:pointer}
   text-align:center;color:var(--muted);font-size:12px;transition:all .15s}
 .drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
 .drop .plus{font-size:20px;line-height:1;color:var(--accent);margin-bottom:4px}
-.drop small{display:block;font-size:11px;opacity:.75;margin-top:5px}
 .link{background:none;border:none;color:var(--accent);text-decoration:underline;padding:0;font-size:12px}
 .devices{display:flex;flex-direction:column;gap:7px;max-height:330px;overflow:auto}
 .dev{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:10px;
-  background:var(--surface-2);border:1px solid transparent}
+  background:var(--surface-2);border:1px solid transparent;transition:box-shadow .15s}
 .dev.manageable{border-color:color-mix(in srgb,var(--ok) 22%,transparent)}
 .dev:not(.manageable){opacity:.62}
+.dev.active{box-shadow:inset 3px 0 0 var(--accent);background:var(--accent-soft)}
 .dev-ico{width:28px;height:28px;flex:none;border-radius:50%;display:grid;place-items:center;
   font-size:12px;font-weight:600;background:var(--accent-soft);color:var(--accent)}
 .dev-ico[data-shape="square"]{border-radius:7px}
@@ -119,8 +124,8 @@ button{cursor:pointer}
 .stat span{font-size:11.5px;color:var(--muted)}
 .preview-box{background:var(--surface-2);border-radius:11px;padding:12px;text-align:center}
 .preview-box img{max-width:100%;max-height:330px;display:block;margin:0 auto}
-.guide{margin-top:14px;padding:12px 14px;border-left:3px solid var(--accent);
-  background:var(--accent-soft);border-radius:0 10px 10px 0;font-size:12.5px}
+.guide{margin-top:14px;padding:10px 14px;border-left:3px solid var(--accent);
+  background:var(--accent-soft);border-radius:0 10px 10px 0;font-size:12px;color:var(--muted)}
 .guide b{color:var(--accent)}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .tab{padding:5px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;
@@ -147,7 +152,6 @@ label.chk{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mut
 .pstat[data-s="run"]{background:var(--warn);animation:pulse 1s infinite}
 .pstat[data-s="ok"]{background:var(--ok)}
 .pstat[data-s="bad"]{background:var(--bad)}
-@keyframes pulse{50%{opacity:.3}}
 .prow.cur{background:var(--accent-soft)}
 .bar{height:6px;background:var(--surface-2);border-radius:20px;overflow:hidden;margin:8px 0}
 .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
@@ -164,9 +168,11 @@ pre.planlog{height:170px;overflow:auto;background:var(--code-bg);border:1px soli
 <body data-mode="light">
 <div class="app">
   <header class="topbar">
-    <div class="brand"><div class="logo">◈</div><div><b>ensp-copilot</b><small>本地实验执行器 · 可审计</small></div></div>
-    <div class="health"><span class="dot" id="dot"></span><span id="healthText">服务在线</span></div>
+    <div class="brand"><div class="logo">◈</div><b>ensp-copilot</b></div>
+    <div class="health"><span class="dot" id="dot"></span><span id="healthText">在线</span></div>
     <div class="spacer"></div>
+    <div class="now" id="nowBox"><span class="pulse"></span><span id="activeText">待命</span></div>
+    <label class="chk" title="Agent 操作时自动跳到该设备"><input type="checkbox" id="follow" checked> 跟随</label>
     <div class="theme">
       <div class="swatches" id="swatches"></div>
       <input type="color" id="accent" title="自定义主色">
@@ -183,8 +189,7 @@ pre.planlog{height:170px;overflow:auto;background:var(--code-bg);border:1px soli
         <div class="drop" id="drop">
           <input type="file" id="file" accept=".topo" hidden>
           <div class="plus">＋</div>
-          <div>拖入 .topo，或 <button class="link" id="pick">选择文件</button></div>
-          <small>自动识别设备、型号、Console 端口并生成清单</small>
+          <div>拖入 .topo 或 <button class="link" id="pick">选择文件</button></div>
         </div>
       </div>
       <div class="panel">
@@ -194,7 +199,6 @@ pre.planlog{height:170px;overflow:auto;background:var(--code-bg);border:1px soli
       <div class="panel">
         <div class="sec">环境自检</div>
         <button class="btn wide" id="check">运行自检</button>
-        <div class="hint" style="margin-top:7px">真实 CLI 握手，7 台约 15 秒</div>
         <ul class="checks" id="checks"></ul>
       </div>
     </aside>
@@ -208,7 +212,7 @@ pre.planlog{height:170px;overflow:auto;background:var(--code-bg);border:1px soli
 
       <section class="panel view on" id="v-overview">
         <div class="hero">
-          <div><h1 id="ovName">未选择拓扑</h1><p id="ovHint">从左侧选一个方案，或上传自己的 .topo</p></div>
+          <div><h1 id="ovName">未选择拓扑</h1><p id="ovHint">—</p></div>
           <span class="badge no" id="ovBadge">未就绪</span>
         </div>
         <div class="stats">
@@ -217,12 +221,12 @@ pre.planlog{height:170px;overflow:auto;background:var(--code-bg);border:1px soli
           <div class="stat"><b id="stMgr">0</b><span>可 CLI 操作</span></div>
         </div>
         <div class="preview-box"><img id="ovImg" alt="拓扑预览" style="display:none"><div class="hint" id="ovEmpty">暂无预览</div></div>
-        <div class="guide"><b>用户只做两步：</b>双击 .topo 用 eNSP 打开 → 全选设备启动。之后提要求、看实时回显即可。<br><b>别双击设备 CLI 窗口</b>：Console 单会话，会抢占连接。</div>
+        <div class="guide"><b>①</b> eNSP 打开 .topo → 全选启动　<b>②</b> 勿开设备 CLI 窗口（单会话会抢占）</div>
       </section>
 
       <section class="panel view" id="v-console">
         <div class="tabs" id="tabs"></div>
-        <pre class="console" id="console">选择设备后，命令与设备真实回显会实时出现在这里。</pre>
+        <pre class="console" id="console">等待回显…</pre>
         <div class="row tight">
           <button class="btn" id="clear">清屏</button>
           <label class="chk"><input type="checkbox" id="autoScroll" checked> 自动滚动</label>
@@ -246,11 +250,10 @@ pre.planlog{height:170px;overflow:auto;background:var(--code-bg);border:1px soli
           <button class="btn danger" id="stopPlan" disabled>停止</button>
           <span class="hint" id="progressText">0 / 0</span>
         </div>
-        <div class="hint" style="margin-top:8px">逐条下发、失败即停；执行前请确认已勾选相应的写权限。下方回显与实时控制台来自同一根连接。</div>
         <div class="bar"><i id="progress"></i></div>
-        <div class="planlist" id="planList"><div class="hint" style="padding:12px">先选 plan 并预览，命令清单会显示在这里。</div></div>
+        <div class="planlist" id="planList"><div class="hint" style="padding:12px">—</div></div>
         <div class="sec" style="margin-top:12px">实时回显</div>
-        <pre class="planlog" id="planLog">等待执行…</pre>
+        <pre class="planlog" id="planLog">—</pre>
       </section>
     </main>
   </div>
@@ -260,8 +263,12 @@ pre.planlog{height:170px;overflow:auto;background:var(--code-bg);border:1px soli
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
-let selected = null, inventory = null, source = null, current = '';
-let planData = null, planRows = [], stopFlag = false;
+const CLIENT_ID = Math.random().toString(36).slice(2) + Date.now().toString(36);
+const PLACEHOLDER = '等待回显…';
+const BUF_LIMIT = 30000;
+let selected = null, inventory = null, current = '';
+let planRows = [], stopFlag = false;
+const buffers = {};
 
 const PRESETS = ['#4f6bed','#8257d6','#0f9d76','#d4880b','#db4a6b','#475569'];
 const THEME_KEY = 'ensp.theme.v2';
@@ -279,9 +286,7 @@ function tint(hex, base, f){
   const b = [1,3,5].map(i => parseInt(base.slice(i,i+2),16));
   return '#' + c.map((v,i) => Math.round(v*f + b[i]*(1-f)).toString(16).padStart(2,'0')).join('');
 }
-function pv(base){
-  return base + (loadTheme().mode === 'dark' ? '&dark=1' : '&dark=0');
-}
+function pv(base){ return base + (loadTheme().mode === 'dark' ? '&dark=1' : '&dark=0'); }
 function applyTheme(){
   const t = loadTheme();
   document.documentElement.dataset.mode = t.mode;
@@ -305,12 +310,13 @@ function initTheme(){
   const qa = q.get('accent'), qm = q.get('mode');
   if (qa && /^#[0-9a-fA-F]{6}$/.test(qa)) saveTheme({accent:qa});
   if (qm === 'dark' || qm === 'light') saveTheme({mode:qm});
+  if (q.get('follow') === '0') $('follow').checked = false;
   $('swatches').innerHTML = PRESETS.map(c =>
     `<button class="sw" data-c="${c}" style="background:${c}" title="${c}"></button>`).join('');
   document.querySelectorAll('.sw').forEach(s => s.onclick = () => saveTheme({accent:s.dataset.c}));
   $('accent').oninput = e => saveTheme({accent:e.target.value});
   $('mode').onclick = () => saveTheme({mode: loadTheme().mode === 'dark' ? 'light' : 'dark'});
-  $('resetTheme').onclick = () => { localStorage.removeItem(THEME_KEY); applyTheme(); toast('主题已恢复默认'); };
+  $('resetTheme').onclick = () => { localStorage.removeItem(THEME_KEY); applyTheme(); toast('已恢复默认'); };
   applyTheme();
 }
 
@@ -327,8 +333,8 @@ function aliasOf(name){ return localStorage.getItem(aliasKey(name)) || name; }
 async function loadCards(prefer){
   let list;
   try { list = await api('/api/topologies'); }
-  catch(e){ $('dot').className = 'dot off'; $('healthText').textContent = '服务不可达'; return; }
-  $('dot').className = 'dot'; $('healthText').textContent = '服务在线';
+  catch(e){ $('dot').className = 'dot off'; $('healthText').textContent = '离线'; return; }
+  $('dot').className = 'dot'; $('healthText').textContent = '在线';
   $('topoCount').textContent = list.length;
   $('cards').innerHTML = list.map(t => `
     <div class="tcard" data-n="${esc(t.name)}">
@@ -336,12 +342,11 @@ async function loadCards(prefer){
       <div class="tmeta">${t.devices} 台设备 · ${t.links} 条链路 · ${t.manageable} 可操作</div>
       <img src="${pv(t.preview)}" alt="预览">
       <div class="tfp">指纹 ${t.fingerprint}</div>
-    </div>`).join('') || '<div class="hint">还没有拓扑，上传一个 .topo 吧</div>';
+    </div>`).join('') || '<div class="hint">暂无拓扑</div>';
   document.querySelectorAll('.tcard').forEach(c => c.onclick = () => selectTopo(c.dataset.n));
   const pick = prefer || (selected && selected.name) || (list[0] && list[0].name);
-  if (pick) selectTopo(pick);
+  if (pick) return selectTopo(pick);
 }
-
 async function selectTopo(name){
   const list = await api('/api/topologies');
   const t = list.find(x => x.name === name);
@@ -349,14 +354,16 @@ async function selectTopo(name){
   selected = t;
   document.querySelectorAll('.tcard').forEach(c => c.classList.toggle('on', c.dataset.n === name));
   inventory = await api('/api/devices?topo=' + encodeURIComponent(name));
-  renderOverview(); renderDevices(); renderTabs();
-  if (current) openStream(current);
+  renderOverview(); renderDevices();
+  const names = manageableNames();
+  if (!names.includes(current)) current = names[0] || '';
+  renderTabs(); markActiveDevice(); renderConsole();
 }
 
 function renderOverview(){
   if (!selected || !inventory) return;
   $('ovName').textContent = selected.name;
-  $('ovHint').textContent = '指纹 ' + selected.fingerprint + ' · 请确认 eNSP 打开的是同一个 .topo';
+  $('ovHint').textContent = '指纹 ' + selected.fingerprint;
   $('stDev').textContent = inventory.devices;
   $('stLink').textContent = inventory.links;
   $('stMgr').textContent = inventory.manageable;
@@ -364,7 +371,6 @@ function renderOverview(){
   $('ovBadge').className = 'badge ' + (inventory.manageable ? 'ok' : 'no');
   $('ovImg').src = pv(selected.preview); $('ovImg').style.display = 'block'; $('ovEmpty').style.display = 'none';
 }
-
 function renderDevices(){
   if (!inventory) return;
   $('devCount').textContent = inventory.devices;
@@ -372,11 +378,10 @@ function renderDevices(){
     const cat = d.category || 'unknown';
     const varName = CATVAR[cat] || '--cat-unknown';
     const shape = SHAPE[cat] || 'round';
-    const display = aliasOf(d.name);
     return `<div class="dev ${d.manageable ? 'manageable' : ''}" data-name="${esc(d.name)}">
       <div class="dev-ico" data-shape="${shape}" style="background:color-mix(in srgb,var(${varName}) 14%,var(--surface));color:var(${varName})">${ICON[cat] || '?'}</div>
       <div class="dev-main">
-        <input class="dev-alias" value="${esc(display)}" title="点击可改名（仅本地显示名）">
+        <input class="dev-alias" value="${esc(aliasOf(d.name))}" title="点击可改名（仅本地显示名）">
         <div class="dev-meta">${esc(d.label)} · ${esc(d.model)} · ${d.port ? ':'+d.port : '无 Console'}</div>
       </div>
       <span class="badge ${d.manageable ? 'ok' : 'no'}">${d.manageable ? 'CLI' : 'GUI'}</span>
@@ -385,11 +390,11 @@ function renderDevices(){
   document.querySelectorAll('.dev').forEach(el => {
     el.querySelector('.dev-alias').onchange = e => {
       localStorage.setItem(aliasKey(el.dataset.name), e.target.value.trim() || el.dataset.name);
-      renderDevices(); renderTabs(); toast('显示名已保存（仅本地）');
+      renderDevices(); renderTabs(); toast('已保存');
     };
   });
+  markActiveDevice();
 }
-
 function sortedRows(){
   if (!inventory) return [];
   return inventory.rows.slice().sort((a,b) =>
@@ -398,40 +403,72 @@ function sortedRows(){
 function manageableNames(){
   return sortedRows().filter(d => d.manageable).map(d => d.name);
 }
+function markActiveDevice(){
+  document.querySelectorAll('.dev').forEach(el =>
+    el.classList.toggle('active', el.dataset.name === current));
+}
 function renderTabs(){
   const names = manageableNames();
   $('tabs').innerHTML = names.map(n =>
     `<span class="tab ${n===current?'on':''}" data-n="${esc(n)}">${esc(aliasOf(n))}</span>`).join('');
-  document.querySelectorAll('.tab').forEach(t => t.onclick = () => openStream(t.dataset.n));
+  document.querySelectorAll('.tab').forEach(t => t.onclick = () => setActiveDevice(t.dataset.n, {command:''}));
   $('cmd').disabled = !current; $('send').disabled = !current;
+}
+function renderConsole(){
+  $('console').textContent = buffers[current] || PLACEHOLDER;
+  $('console').scrollTop = $('console').scrollHeight;
 }
 function appendConsole(text){
   if ($('pause').checked) return;
-  const p = $('console'); p.textContent += text;
+  const p = $('console');
+  if (p.textContent === PLACEHOLDER) p.textContent = '';
+  p.textContent += text;
   if ($('autoScroll').checked) p.scrollTop = p.scrollHeight;
 }
-function openStream(device){
-  if (!selected) return;
-  if (source) source.close();
-  current = device; renderTabs();
-  if ($('console').textContent.indexOf('选择设备后') === 0) $('console').textContent = '';
-  source = new EventSource(`/events?topo=${encodeURIComponent(selected.name)}&device=${encodeURIComponent(device)}`);
-  source.onmessage = e => {
-    try { const d = JSON.parse(e.data); appendConsole(d.text); }
-    catch(_) { appendConsole(e.data); }
+function setActiveDevice(device, info){
+  if (!inventory || !manageableNames().includes(device)) return;
+  const changed = current !== device;
+  current = device;
+  renderTabs(); markActiveDevice();
+  if (changed) renderConsole();
+  $('activeText').textContent = aliasOf(device) + (info.command ? ' · ' + info.command : '');
+  $('nowBox').classList.add('live');
+}
+function switchView(v){
+  document.querySelectorAll('.mtab').forEach(x => x.classList.toggle('on', x.dataset.v === v));
+  document.querySelectorAll('.view').forEach(x => x.classList.toggle('on', x.id === 'v-' + v));
+  if (v === 'console') $('console').scrollTop = $('console').scrollHeight;
+}
+function initActiveStream(){
+  const es = new EventSource('/events/active');
+  es.onmessage = e => {
+    let d;
+    try { d = JSON.parse(e.data); } catch(_) { return; }
+    if (d.type === 'bytes'){
+      buffers[d.device] = ((buffers[d.device] || '') + d.text).slice(-BUF_LIMIT);
+      if (d.device === current) appendConsole(d.text);
+      return;
+    }
+    if (d.type !== 'active') return;
+    const follow = $('follow').checked && d.client !== CLIENT_ID;
+    const apply = () => { setActiveDevice(d.device, d); if (follow) switchView('console'); };
+    if (d.topo && (!selected || d.topo !== selected.name)) selectTopo(d.topo).then(apply);
+    else apply();
   };
-  source.onerror = () => appendConsole('\n[实时连接断开：设备是否还在？是否被 CLI 窗口抢占？]\n');
-  appendConsole('--- 已连接 ' + aliasOf(device) + ' 实时回显 ---\n');
+  es.onerror = () => { $('nowBox').classList.remove('live'); $('activeText').textContent = '连接断开'; };
 }
 
+async function command(body){
+  return api('/api/command', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(Object.assign({topo:selected.name, client:CLIENT_ID, source:'gui'}, body))
+  });
+}
 async function sendCommand(){
   const cmd = $('cmd').value.trim();
   if (!cmd || !current || !selected) return;
-  const r = await api('/api/command', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({topo:selected.name, device:current, command:cmd,
-      allow_write:$('write').checked, confirmed:$('confirm').checked})
-  });
+  const r = await command({device:current, command:cmd,
+    allow_write:$('write').checked, confirmed:$('confirm').checked});
   if (r.problems) appendConsole('\n[拦截] ' + r.problems.join('; ') + '\n');
   if (r.error) appendConsole('\n[错误] ' + r.error + '\n');
 }
@@ -439,13 +476,13 @@ async function sendCommand(){
 async function runCheck(){
   if (!selected) { toast('先选一个拓扑', 'bad'); return; }
   $('check').disabled = true; $('check').textContent = '自检中…';
-  $('checks').innerHTML = '<li>正在逐台做真实 CLI 握手，请稍候…</li>';
+  $('checks').innerHTML = '<li>自检中…</li>';
   try {
     const r = await api(`/api/status?topo=${encodeURIComponent(selected.name)}&fingerprint=${encodeURIComponent(selected.fingerprint)}`);
     $('checks').innerHTML = r.checks.map(c =>
       `<li class="${c.ok?'ok':'bad'}">${c.ok?'✓':'✗'} ${esc(c.name)} — ${esc(c.detail||'')}</li>`).join('');
-    toast(r.ready ? '自检全绿，设备可控' : '自检未通过，请看左侧明细', r.ready ? 'ok' : 'bad');
-  } catch(e) { $('checks').innerHTML = '<li class="bad">自检请求失败</li>'; }
+    toast(r.ready ? '自检通过' : '自检未通过', r.ready ? 'ok' : 'bad');
+  } catch(e) { $('checks').innerHTML = '<li class="bad">自检失败</li>'; }
   $('check').disabled = false; $('check').textContent = '运行自检';
 }
 
@@ -458,7 +495,7 @@ async function uploadFile(file){
   });
   if (r.error) { toast(r.error, 'bad'); return; }
   await loadCards(r.name);
-  toast(`已识别 ${r.devices} 台设备，其中 ${r.manageable} 台可 CLI 操作`, 'ok');
+  toast(`已识别 ${r.devices} 台设备`, 'ok');
 }
 function initUpload(){
   const drop = $('drop');
@@ -477,7 +514,7 @@ async function loadPlans(){
 async function previewPlan(){
   const name = $('plans').value;
   if (!name) return;
-  planData = await api('/api/plan?name=' + encodeURIComponent(name));
+  const planData = await api('/api/plan?name=' + encodeURIComponent(name));
   planRows = [];
   Object.entries(planData).forEach(([dev, cmds]) => cmds.forEach(c => planRows.push({device:dev, cmd:c})));
   $('planList').innerHTML = planRows.map((r,i) => `
@@ -489,7 +526,7 @@ async function previewPlan(){
   $('progress').style.width = '0%';
   $('progressText').textContent = '0 / ' + planRows.length;
   $('runPlan').disabled = !planRows.length;
-  $('planLog').textContent = '预览完成，共 ' + planRows.length + ' 条命令。点「逐条执行」开始。';
+  $('planLog').textContent = '共 ' + planRows.length + ' 条';
 }
 function setRow(i, state){
   const el = $('prow'+i); if (!el) return;
@@ -498,48 +535,42 @@ function setRow(i, state){
   if (state === 'run') el.scrollIntoView({block:'nearest'});
 }
 function appendPlanLog(text){
-  const p = $('planLog'); p.textContent += text; p.scrollTop = p.scrollHeight;
+  const p = $('planLog');
+  if (p.textContent === '—') p.textContent = '';
+  p.textContent += text; p.scrollTop = p.scrollHeight;
 }
 async function runPlan(){
   if (!selected || !planRows.length) return;
-  if (!confirm('即将把 ' + planRows.length + ' 条命令逐条下发到真实设备。\n确认继续？')) return;
+  if (!confirm('下发 ' + planRows.length + ' 条命令？')) return;
   stopFlag = false; $('runPlan').disabled = true; $('stopPlan').disabled = false;
   $('planLog').textContent = '';
   const allow = $('write').checked, conf = $('confirm').checked;
   let done = 0, failed = null;
   for (let i=0; i<planRows.length; i++){
-    if (stopFlag) { appendPlanLog('\n[已手动停止]\n'); break; }
+    if (stopFlag) { appendPlanLog('\n[已停止]\n'); break; }
     const row = planRows[i];
     setRow(i, 'run');
     appendPlanLog(`\n> [${aliasOf(row.device)}] ${row.cmd}\n`);
     let r;
-    try {
-      r = await api('/api/command', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({topo:selected.name, device:row.device, command:row.cmd,
-          allow_write:allow, confirmed:conf})
-      });
-    } catch(e) { r = {error:String(e)}; }
+    try { r = await command({device:row.device, command:row.cmd, allow_write:allow, confirmed:conf}); }
+    catch(e) { r = {error:String(e)}; }
     const bad = !!(r.problems || r.error || /Error:|Unrecognized|Wrong parameter/.test(r.output||''));
     setRow(i, bad ? 'bad' : 'ok');
     appendPlanLog((r.output || (r.problems && r.problems.join('; ')) || r.error || '(无回显)') + '\n');
     done++;
     $('progress').style.width = (done/planRows.length*100) + '%';
     $('progressText').textContent = done + ' / ' + planRows.length;
-    if (bad) { failed = row.cmd; appendPlanLog('\n[失败即停] 后续命令未下发\n'); break; }
+    if (bad) { failed = row.cmd; appendPlanLog('\n[失败即停]\n'); break; }
   }
   $('runPlan').disabled = false; $('stopPlan').disabled = true;
-  toast(failed ? '已停止：' + failed : (stopFlag ? '已手动停止' : '执行完成'), failed ? 'bad' : 'ok');
+  toast(failed ? '已停止：' + failed : (stopFlag ? '已停止' : '执行完成'), failed ? 'bad' : 'ok');
 }
 
 function initTabs(){
-  document.querySelectorAll('.mtab').forEach(b => b.onclick = () => {
-    document.querySelectorAll('.mtab').forEach(x => x.classList.toggle('on', x === b));
-    document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + b.dataset.v));
-    if (b.dataset.v === 'console') appendConsole('');
-  });
+  document.querySelectorAll('.mtab').forEach(b => b.onclick = () => switchView(b.dataset.v));
   $('fsize').onchange = e => $('console').style.fontSize = e.target.value + 'px';
-  $('clear').onclick = () => $('console').textContent = '';
+  $('clear').onclick = () => { buffers[current] = ''; renderConsole(); };
+  $('pause').onchange = () => { if (!$('pause').checked) renderConsole(); };
   $('send').onclick = sendCommand;
   $('cmd').onkeydown = e => { if (e.key === 'Enter') sendCommand(); };
   $('check').onclick = runCheck;
@@ -549,7 +580,7 @@ function initTabs(){
   $('plans').onchange = previewPlan;
 }
 
-initTheme(); initTabs(); initUpload();
+initTheme(); initTabs(); initUpload(); initActiveStream();
 loadCards(); loadPlans();
 </script>
 </body>

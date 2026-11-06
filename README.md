@@ -38,6 +38,8 @@ eNSP 没有开放 API，设备 CLI 是内嵌窗口。让 AI「代敲命令」很
 
 之后：提要求 → 预览 plan → 点「逐条执行」→ 实时看每条命令的状态与回显。
 
+Agent 下发命令时，页面会**自动跳到当前操作的设备**并切到实时控制台；顶栏显示设备名与命令，左侧设备清单同步高亮。顶栏「跟随」可关闭，或用 `?follow=0`。
+
 两个必须遵守的前提：
 
 - **别双击任何设备的 CLI 窗口**（单会话，会抢占连接）
@@ -72,7 +74,7 @@ python -m ensp_copilot.server --port 8765
 2. 全部设备已启动完成（AR 约 1–3 分钟）
 3. 没有其他程序占用设备 Console
 
-页面提供：拓扑候选卡片（含离线 SVG 预览）、拖拽上传 `.topo`、自动生成设备清单、主色 / 深浅主题自定义、环境自检、实时控制台、Plan 逐条执行视图。主题可用 URL 参数分享：`?mode=dark&accent=%238257d6`。
+页面提供：拓扑候选卡片（含离线 SVG 预览）、拖拽上传 `.topo`、自动生成设备清单、主色 / 深浅主题自定义、环境自检、实时控制台、Plan 逐条执行视图，以及 Agent 操作时的设备自动跟随。主题可用 URL 参数分享：`?mode=dark&accent=%238257d6`。
 
 ## 核心设计：一个会话，多个订阅者
 
@@ -84,15 +86,17 @@ eNSP device ─── Session ─ Hub ─┼─ 命令执行器（临时订阅 +
 
 `SessionManager` 是**唯一**持有 socket 的地方。`Hub.publish()` 把同一份字节流广播给所有订阅者；`write_lock` 保证同一设备一次只有一条命令在飞，避免回显串台。这是全项目最关键的约束。
 
+在此之上有一条**全局事件流** `/events/active`：所有设备的字节都带设备名转发过来，同时广播「当前正在操作哪台设备」。浏览器只订阅这一条流、按设备缓存，切换设备只换显示、不重连 socket，因此 Agent 切到任意设备时窗口都不会丢字节。
+
 自检**不盲信 `.topo` 里的 `com_port`**：该字段由 eNSP 分配、未公开，且不按设备编号排序（实测 R1=2006、R2=2000）。一律先做真实端口扫描 + 逐台 CLI 握手，再用拓扑指纹比对，防止用户打开了另一个方案。
 
 ## 现在能做什么
 
 | 状态 | 能力 |
 |---|---|
-| ✅ 已实现 | `.topo` 解析与设备分类；离线 SVG 渲染（浅/深色）；唯一会话 + tee 广播；SSE 实时窗口；环境自检与真实 CLI 握手 + 指纹比对；只读白名单 / 危险命令确认 / plan 校验 / 基线 diff；交互式 `save` |
+| ✅ 已实现 | `.topo` 解析与设备分类；离线 SVG 渲染（浅/深色）；唯一会话 + tee 广播；SSE 实时窗口；**Agent 操作时页面自动跟随设备**；环境自检与真实 CLI 握手 + 指纹比对；只读白名单 / 危险命令确认 / plan 校验 / 基线 diff；交互式 `save` |
 | ✅ 已实现 | **GUI 拖拽上传 `.topo`**：自动识别设备、型号、Console 端口并生成清单，显示名可本地修改；主色 / 深浅主题自定义 |
-| ✅ 已实现 | **Plan 逐条执行视图**：逐条下发、进度与实时回显、失败即停；5 份真实实验 plan；29 个基于 fixtures 的单测，CI 不需要 eNSP |
+| ✅ 已实现 | **Plan 逐条执行视图**：逐条下发、进度与实时回显、失败即停；5 份真实实验 plan；33 个基于 fixtures 的单测，CI 不需要 eNSP |
 | 🔧 规划中 | 按自然语言需求**生成多个 `.topo` 候选**（当前只提供 1 份示例拓扑 + 渲染器） |
 | 🔧 规划中 | 基线 diff 自动回滚（目前只有辅助函数）；MCP adapter；`xterm.js` 终端渲染 |
 
@@ -104,17 +108,17 @@ eNSP device ─── Session ─ Hub ─┼─ 命令执行器（临时订阅 +
 ensp_copilot/
   topo.py       .topo XML → 设备、链路、坐标、类别、com_port、指纹
   console.py    裸 TCP 传输、视图规整、关分页、交互式 save
-  session.py    核心：唯一连接 + Hub tee 广播 + 写锁
+  session.py    核心：唯一连接 + Hub tee 广播 + 写锁 + 全局字节镜像
   render.py     离线 SVG（形状=设备类型，实线/虚线=能否 CLI 操作）
   env.py        自检：端口扫描 + CLI 握手 + 指纹比对
   safety.py     只读白名单、危险命令确认、plan 校验、基线 diff
-  server.py     stdlib HTTP + SSE，零依赖本地窗口
-web/            单页 GUI（上传 / 设备清单 / 主题 / 实时控制台 / Plan 逐条执行）
+  server.py     stdlib HTTP + SSE（含 /events/active 全局跟随流），零依赖
+web/            单页 GUI（上传 / 设备清单 / 主题 / 设备跟随 / 实时控制台 / Plan 逐条执行）
 plans/          5 份真实实验配置
 fixtures/       真实设备回显，用于无 eNSP 的测试
 topologies/     示例 .topo
 docs/           架构、踩坑知识库、项目故事与对外文案
-tests/          unittest，29 项
+tests/          unittest，33 项
 ```
 
 ## 真实实验背书
@@ -152,14 +156,14 @@ python tools/rename_devices.py --suffix LAB                # 或把所有 R<n>-<
 python -m unittest discover -s tests -v
 ```
 
-29 项全部基于 `fixtures/`，无需 eNSP、无需网络。
+33 项全部基于 `fixtures/`，无需 eNSP、无需网络。
 
 ## 路线图
 
 - [x] P0 核心库拆分 + fixtures 单测
 - [x] P1 `.topo` → SVG 渲染 + 候选卡片 + 自检向导
 - [x] P2 常驻会话 tee + SSE 实时窗口 + 真实 CLI 握手
-- [x] P3a GUI 升级：上传 `.topo` 自动识别设备、主题自定义、Plan 逐条执行 / 失败即停
+- [x] P3a GUI 升级：上传 `.topo` 自动识别设备、主题自定义、Agent 操作自动跟随设备、Plan 逐条执行 / 失败即停
 - [ ] P3b 基线自动 diff 与一键回滚
 - [ ] P4 可选 MCP adapter（约 100 行，不进核心）
 - [ ] P4 `xterm.js` 终端渲染（当前用 `<pre>`）

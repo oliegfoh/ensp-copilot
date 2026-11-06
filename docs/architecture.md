@@ -21,6 +21,8 @@ eNSP device ─── Session ─ Hub ─┼─ 命令执行器（临时订阅 +
 
 `SessionManager` 是唯一持有 socket 的地方。`Hub.publish()` 把**同一份真实字节流**广播给所有订阅者。实时窗口绝不能自己 `connect()`，否则会把执行器踢掉。
 
+`SessionManager(sink=...)` 另把每个会话的字节带设备名镜像到全局 `ACTIVE` Hub。`/events/active` 是单条 SSE：既发 `{"type":"bytes"}`（全部设备），也发 `{"type":"active"}`（当前操作的设备/命令/来源）。前端常驻订阅、按设备缓存，切设备只换显示不重连，因此 Agent 在任意设备上下发命令时窗口都不丢字节。
+
 `write_lock` 保证同一设备一次只有一条命令在飞，避免回显串台。
 
 ## 请求路径
@@ -30,13 +32,20 @@ eNSP device ─── Session ─ Hub ─┼─ 命令执行器（临时订阅 +
 | `GET /api/topologies` | 列出 `topologies/*.topo` + 指纹 + 可操作设备数 |
 | `GET /api/render?topo=` | 离线 SVG 缩略图 |
 | `GET /api/status?topo=&fingerprint=` | 自检报告（端口扫描 + 指纹比对） |
-| `GET /events?topo=&device=` | SSE 实时字节流 |
+| `GET /events?topo=&device=` | SSE 单设备字节流（兼容保留） |
+| `GET /events/active` | SSE 全局流：全部设备字节 + 当前活动设备通知 |
+| `GET /api/devices?topo=` | 设备清单（名称/型号/类别/端口/可操作性） |
+| `POST /api/upload` | 上传 `.topo` 并自动识别设备 |
 | `POST /api/command` | 单条命令（经 `safety.validate_plan`） |
 | `POST /api/plan` | 应用 plan JSON |
 
 ## 为什么用 SSE 而不是 WebSocket
 
 WebSocket 需要第三方库；SSE 是 stdlib `http.server` 就能做的单向流，而实时窗口只需要「后端 → 前端」的字节推送。写方向用普通 HTTP POST。零依赖，clone 即可运行。
+
+## 跟随机制
+
+`POST /api/command` 在执行前发一条 `active` 事件。GUI 发起的请求带 `client`（页面级随机 ID），外部 Agent 不带 —— 前端只对「非本页来源」强制切到实时控制台，避免 Plan 执行把自己跳走。`?follow=0` 或取消顶栏「跟随」可完全关闭。
 
 ## 设备可操作性
 

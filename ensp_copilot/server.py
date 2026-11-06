@@ -18,7 +18,7 @@ from urllib.parse import parse_qs, urlparse
 from . import env, safety
 from .console import clean
 from .render import render_svg
-from .session import SessionManager
+from .session import Hub, SessionManager
 from .topo import parse_topo
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -27,8 +27,29 @@ TOPO_DIR = ROOT / "topologies"
 PLAN_DIR = ROOT / "plans"
 
 TOPOLOGIES: dict = {}
-MANAGER = SessionManager()
+ACTIVE = Hub()          # one global stream: activity notices + bytes of every device
 LOCK = threading.Lock()
+
+
+def active_event(topo: str, device: str, command: str = "",
+                 source: str = "agent", client: str = "") -> dict:
+    """Tell every open GUI which device is being driven right now."""
+    return {"type": "active", "topo": topo, "device": device,
+            "command": command, "source": source, "client": client}
+
+
+def announce(topo: str, device: str, command: str = "",
+             source: str = "agent", client: str = "") -> None:
+    ACTIVE.publish(json.dumps(active_event(topo, device, command, source, client),
+                              ensure_ascii=False).encode("utf-8"))
+
+
+def emit_bytes(device: str, text: str) -> None:
+    ACTIVE.publish(json.dumps({"type": "bytes", "device": device, "text": text},
+                              ensure_ascii=False).encode("utf-8"))
+
+
+MANAGER = SessionManager(sink=emit_bytes)
 
 
 def load_topologies(directory: pathlib.Path) -> dict:
@@ -163,8 +184,34 @@ class Handler(BaseHTTPRequestHandler):
             self._json(safety.load_plan(file))
         elif path == "/events":
             self._stream(q)
+        elif path == "/events/active":
+            self._stream_active()
         else:
             self._json({"error": "not found"}, 404)
+
+    def _stream_active(self):
+        """Single global SSE stream. Never opens a device socket."""
+        sub = ACTIVE.subscribe()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "close")
+        self.end_headers()
+        try:
+            self.wfile.write(b": ready\n\n")
+            self.wfile.flush()
+            while True:
+                try:
+                    payload = sub.get(timeout=10)
+                except queue.Empty:
+                    self.wfile.write(b": keepalive\n\n")
+                else:
+                    self.wfile.write(b"data: " + payload + b"\n\n")
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass
+        finally:
+            ACTIVE.unsubscribe(sub)
 
     def _stream(self, q):
         name, device = q.get("topo", [""])[0], q.get("device", [""])[0]
@@ -248,6 +295,11 @@ class Handler(BaseHTTPRequestHandler):
         )
         if problems:
             return self._json({"problems": problems}, 403)
+        # Announce before executing: the GUI switches its view while the bytes
+        # still arrive on the global stream, so nothing is lost to a re-subscribe.
+        announce(body.get("topo", ""), dev.name, cmd,
+                 source=str(body.get("source", "agent")),
+                 client=str(body.get("client", "")))
         try:
             with LOCK:
                 output = MANAGER.get(dev).execute(cmd, wait=float(body.get("wait", 1.2)))
@@ -278,7 +330,11 @@ class Handler(BaseHTTPRequestHandler):
             for name, commands in plan.items():
                 dev = t.by_name[name]
                 session = MANAGER.get(dev)
-                results[name] = [(c, session.execute(c, wait=1.2)) for c in commands]
+                for c in commands:
+                    announce(body.get("topo", ""), name, c,
+                             source=str(body.get("source", "agent")),
+                             client=str(body.get("client", "")))
+                    results.setdefault(name, []).append((c, session.execute(c, wait=1.2)))
         return self._json({"applied": results})
 
 

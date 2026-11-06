@@ -130,10 +130,18 @@ class Session:
 
 
 class SessionManager:
-    """Lazily create and own exactly one Session per device."""
+    """Lazily create and own exactly one Session per device.
 
-    def __init__(self, host: str = HOST):
+    ``sink`` is an optional callback ``(device_name, text)`` that receives every
+    byte from EVERY session. It lets the GUI follow whatever device the agent
+    is currently driving without opening a second socket or re-subscribing
+    (which would lose bytes). The live window and the executor stay on the
+    same stream.
+    """
+
+    def __init__(self, host: str = HOST, sink=None):
         self.host = host
+        self.sink = sink
         self._sessions: dict[str, Session] = {}
         self._lock = threading.Lock()
 
@@ -146,7 +154,27 @@ class SessionManager:
             session = Session(device=device, sock=sock).start()
             session.prepare()
             self._sessions[device.name] = session
-            return session
+        # Attach outside the lock. Warm-up bytes are deliberately not mirrored:
+        # they are handshake noise, not commands the user asked to watch.
+        if self.sink:
+            self._attach_forwarder(device.name, session)
+        return session
+
+    def _attach_forwarder(self, name: str, session: Session) -> None:
+        q = session.hub.subscribe()
+
+        def pump():
+            while session.running:
+                try:
+                    data = q.get(timeout=0.4)
+                except queue.Empty:
+                    continue
+                try:
+                    self.sink(name, data.decode("gbk", errors="replace"))
+                except Exception:
+                    pass  # a broken UI sink must never take down the console
+
+        threading.Thread(target=pump, daemon=True, name=f"tee-{name}").start()
 
     def subscribe(self, device) -> queue.Queue:
         return self.get(device).hub.subscribe()
