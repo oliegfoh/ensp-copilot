@@ -104,9 +104,26 @@ def _attrs(fragment: str) -> dict[str, str]:
     return dict(_ATTR.findall(fragment))
 
 
+def _read_topo_text(path: pathlib.Path) -> str:
+    """eNSP ``.topo`` is plain XML but often saved as UTF-16 (declared
+    ``encoding="UNICODE"``). A naive UTF-8 read injects NUL bytes between
+    characters and silently drops every ``<dev>`` tag, so detect the real
+    encoding before decoding.
+    """
+    data = path.read_bytes()
+    if data[:2] in (b"\xff\xfe", b"\xfe\xff"):          # UTF-16 BOM
+        return data.decode("utf-16", errors="replace")
+    if data[:3] == b"\xef\xbb\xbf":                     # UTF-8 BOM
+        return data.decode("utf-8-sig", errors="replace")
+    # No BOM: if every other byte is a NUL the file is UTF-16LE without a BOM.
+    if len(data) > 4 and data[1::2].count(0) > len(data) // 3:
+        return data.decode("utf-16-le", errors="replace")
+    return data.decode("utf-8", errors="replace")
+
+
 def parse_topo(path) -> Topology:
     path = pathlib.Path(path)
-    text = path.read_text("utf-8", errors="replace")
+    text = _read_topo_text(path)
     topo = Topology(path=path)
 
     m = re.search(r"<topo\s+([^>]*)>", text)

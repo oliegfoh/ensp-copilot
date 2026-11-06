@@ -525,7 +525,7 @@ async function uploadFile(file){
     }
     if (r.error) { toast(r.error, 'bad'); return; }
     await loadCards(r.name);
-    toast(`已识别 ${r.devices} 台设备`, 'ok');
+    toast(`已切换到 ${r.name} · 识别 ${r.devices} 台设备`, 'ok');
   } catch(e){
     toast('读取文件失败：' + (e && e.message || e), 'bad');
   } finally {
