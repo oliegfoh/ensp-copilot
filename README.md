@@ -45,6 +45,23 @@ Agent 下发命令时，页面会**自动跳到当前操作的设备**并切到�
 - **别双击任何设备的 CLI 窗口**（单会话，会抢占连接）
 - 生成拓扑时只用 CLI 可操作设备（Router / Switch / 防火墙）。Server / Cloud 的服务配置是 GUI 对话框，一旦用上，「只做两步」就不成立了
 
+## 支持哪些设备
+
+不是 eNSP 里所有设备都能被 Agent 操作。能不能操作，取决于设备有没有对外暴露的 Console 端口（`com_port`）：
+
+| 类别 | 设备类型 | 可操作？ | 说明 |
+|---|---|---|---|
+| 路由器 / 交换机 | Router、AR、NE、CE、S 系列 | ✅ | 真实 VRP CLI，分配了 `com_port`，可经 Console 下发命令 |
+| 无线 | AC、AP | ✅ | 同属 VRP 体系，有 `com_port` |
+| 防火墙 | USG 系列 | ✅ | 有 `com_port` |
+| 终端 / 服务器 | PC、Server、Client、STA、Cellphone、MCS | ❌ | `com_port=0`，eNSP 内部模拟，配置只在 GUI 对话框 |
+| 透传 / 二层 | Cloud、HUB、FRSW | ❌ | 同上，无对外控制台 |
+| 其它 | CX 等未识别型号 | ⚠️ | 部分虽分配了 `com_port`，但型号未被识别规则覆盖，暂按不可操作处理（待补规则） |
+
+一句话：**只有带真实 Console 端口、跑 VRP/WLAN/FW CLI 的设备（路由交换、无线、防火墙）能被 Agent 操作；终端、服务器、Cloud 这类模拟设备只能在 eNSP 里手动配。**
+
+想让终端 / 服务器也被 Agent 操作，得把它们换成「Cloud 桥接真实虚拟机」——这是当前的可行路径，工具的 SSH 操作模式尚在规划中。
+
 ## 和「eNSP MCP Server」不是一回事
 
 MCP 是「AI 客户端 ↔ 工具」协议，不是「程序 ↔ 设备」协议。已有 eNSP MCP 项目的底层同样是通过 Telnet/裸 TCP 连 Console 端口。
