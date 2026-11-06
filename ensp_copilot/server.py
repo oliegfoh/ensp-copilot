@@ -13,7 +13,7 @@ import queue
 import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlparse, unquote
 
 from . import env, safety
 from .console import clean
@@ -261,6 +261,29 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/plan":
             return self._apply_plan(body)
         return self._json({"error": "not found"}, 404)
+
+    def do_DELETE(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+        if path.startswith("/api/topologies/"):
+            name = unquote(path.rsplit("/", 1)[-1])
+            return self._delete_topo(name)
+        return self._json({"error": "not found"}, 404)
+
+    def _delete_topo(self, name):
+        """Remove a topology from memory and delete its .topo file on disk."""
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", name or ""):
+            return self._json({"error": "非法的拓扑名"}, 400)
+        if name not in TOPOLOGIES:
+            return self._json({"error": "未知拓扑"}, 404)
+        target = TOPO_DIR / f"{name}.topo"
+        try:
+            target.unlink(missing_ok=True)
+        except OSError as exc:
+            return self._json({"error": f"删除文件失败: {exc}"}, 500)
+        del TOPOLOGIES[name]
+        print(f"[delete] {name}")
+        self._json({"ok": True, "name": name})
 
     def _upload(self, body):
         """Accept a .topo as text, store it, and return the parsed inventory."""

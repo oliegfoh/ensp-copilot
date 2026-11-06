@@ -64,10 +64,15 @@ button{cursor:pointer}
   border-radius:20px;padding:1px 8px;font-size:11px}
 .cards{display:flex;flex-direction:column;gap:9px;max-height:290px;overflow:auto}
 .tcard{border:1px solid var(--border);border-radius:11px;padding:10px;cursor:pointer;
-  background:var(--surface);transition:border-color .15s,transform .15s}
+  background:var(--surface);transition:border-color .15s,transform .15s;position:relative}
 .tcard:hover{border-color:var(--accent);transform:translateY(-1px)}
 .tcard.on{border:2px solid var(--accent);padding:9px;background:var(--accent-soft)}
-.tcard .tname{font-weight:600;font-size:13px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tcard .tname{font-weight:600;font-size:13px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:22px}
+.tcard .tdel{position:absolute;top:6px;right:6px;width:22px;height:22px;border:1px solid var(--border);
+  background:var(--surface);color:var(--muted);border-radius:6px;font-size:15px;line-height:1;
+  display:grid;place-items:center;cursor:pointer;opacity:0;transition:opacity .15s,color .15s,border-color .15s}
+.tcard:hover .tdel{opacity:1}
+.tcard .tdel:hover{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
 .tcard .tmeta{font-size:11px;color:var(--muted)}
 .tcard img{width:100%;height:72px;object-fit:contain;display:block;margin:7px 0 4px;
   background:var(--surface-2);border-radius:7px}
@@ -343,14 +348,35 @@ async function loadCards(prefer){
   $('topoCount').textContent = list.length;
   $('cards').innerHTML = list.map(t => `
     <div class="tcard" data-n="${esc(t.name)}">
+      <button class="tdel" data-n="${esc(t.name)}" title="删除拓扑">×</button>
       <div class="tname">${esc(t.name)}</div>
       <div class="tmeta">${t.devices} 台设备 · ${t.links} 条链路 · ${t.manageable} 可操作</div>
       <img src="${pv(t.preview)}" alt="预览">
       <div class="tfp">指纹 ${t.fingerprint}</div>
     </div>`).join('') || '<div class="hint">暂无拓扑</div>';
   document.querySelectorAll('.tcard').forEach(c => c.onclick = () => selectTopo(c.dataset.n));
+  document.querySelectorAll('.tdel').forEach(b => b.onclick = e => { e.stopPropagation(); deleteTopo(b.dataset.n); });
+  if (selected && !list.some(t => t.name === selected.name)) clearSelection();
   const pick = prefer || (selected && selected.name) || (list[0] && list[0].name);
   if (pick) return selectTopo(pick);
+}
+function clearSelection(){
+  selected = null; inventory = null; current = '';
+  $('ovName').textContent = '未选择拓扑'; $('ovHint').textContent = '—';
+  $('stDev').textContent = '0'; $('stLink').textContent = '0'; $('stMgr').textContent = '0';
+  $('ovBadge').textContent = '未就绪'; $('ovBadge').className = 'badge no';
+  $('ovImg').style.display = 'none'; $('ovEmpty').style.display = 'block';
+  $('devices').innerHTML = ''; $('devCount').textContent = '0';
+  renderTabs(); renderConsole();
+}
+async function deleteTopo(name){
+  if (!confirm(`删除拓扑「${name}」？\n该 .topo 文件将从本地移除，且无法恢复。`)) return;
+  try {
+    const r = await fetch('/api/topologies/' + encodeURIComponent(name), {method:'DELETE'}).then(x => x.json());
+    if (r.error) { toast(r.error, 'bad'); return; }
+    toast('已删除 ' + name, 'ok');
+  } catch(e){ toast('删除失败：' + (e && e.message || e), 'bad'); }
+  await loadCards();
 }
 async function selectTopo(name){
   const list = await api('/api/topologies');
