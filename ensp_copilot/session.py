@@ -13,7 +13,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 
-from .console import HOST
+from .console import HOST, PROMPT_RE
 
 
 class Hub:
@@ -98,6 +98,26 @@ class Session:
             finally:
                 self.hub.unsubscribe(q)
 
+    def prepare(self) -> str:
+        """Warm up a freshly opened console.
+
+        eNSP emits a prompt (sometimes a few handshake bytes) right after a TCP
+        connection is accepted. Without this warm-up the FIRST command gets
+        swallowed and its "reply" is only that prompt -- a false positive that
+        looks exactly like a working device. Also normalises the CLI to user
+        view and disables paging. All bytes still reach live subscribers.
+        """
+        banner = ""
+        for _ in range(6):
+            raw = self.raw(b"\r\n", wait=0.6)
+            banner += raw
+            prompts = PROMPT_RE.findall(raw.replace("\r", ""))
+            if not prompts or prompts[-1].startswith("<"):
+                break
+            self.raw(b"quit\r\n", wait=0.5)
+        self.raw(b"screen-length 0 temporary\r\n", wait=0.6)
+        return banner
+
     def execute(self, cmd: str, wait: float = 1.2) -> str:
         return self.raw(("\r\n" + cmd + "\r\n").encode(), wait)
 
@@ -124,6 +144,7 @@ class SessionManager:
                 return session
             sock = socket.create_connection((self.host, device.port), timeout=4)
             session = Session(device=device, sock=sock).start()
+            session.prepare()
             self._sessions[device.name] = session
             return session
 

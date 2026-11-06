@@ -34,5 +34,43 @@ class TestHub(unittest.TestCase):
         self.assertIn("2026-11-05", output)
 
 
+class TestSessionPrepare(unittest.TestCase):
+    """A fresh eNSP console swallows the first command unless warmed up."""
+
+    def test_prepare_wakes_cli_and_disables_paging(self):
+        from unittest.mock import patch
+        from ensp_copilot.session import Session
+
+        session = Session(device=None, sock=None)
+        sent = []
+
+        def fake_raw(payload, wait=1.2):
+            sent.append(payload)
+            return "\r\n<R1-LAB>"
+
+        with patch.object(session, "raw", side_effect=fake_raw):
+            session.prepare()
+        blob = b"".join(sent)
+        self.assertEqual(sent[0], b"\r\n")
+        self.assertIn(b"screen-length 0 temporary", blob)
+        self.assertNotIn(b"quit", blob)  # already in user view
+
+    def test_prepare_exits_system_view(self):
+        from unittest.mock import patch
+        from ensp_copilot.session import Session
+
+        session = Session(device=None, sock=None)
+        replies = ["\r\n[R1-LAB]", "\r\n", "\r\n<R1-LAB>"]
+        sent = []
+
+        def fake_raw(payload, wait=1.2):
+            sent.append(payload)
+            return replies.pop(0) if replies else "\r\n<R1-LAB>"
+
+        with patch.object(session, "raw", side_effect=fake_raw):
+            session.prepare()
+        self.assertIn(b"quit\r\n", b"".join(sent))
+
+
 if __name__ == "__main__":
     unittest.main()

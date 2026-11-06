@@ -16,6 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from . import env, safety
+from .console import clean
 from .render import render_svg
 from .session import SessionManager
 from .topo import parse_topo
@@ -98,6 +99,25 @@ class Handler(BaseHTTPRequestHandler):
             if not t:
                 return self._json({"error": "unknown topology"}, 404)
             report = env.check(t, q.get("fingerprint", [""])[0], handshake=False)
+            # A listening port is NOT proof the CLI works. Replace the
+            # "skipped" placeholder with a real handshake over the SINGLE
+            # owned session -- a second socket would kick the live window off.
+            report.checks = [c for c in report.checks
+                            if not (c.name == "CLI 握手" and "跳过" in c.detail)]
+            for dev in t.manageable_devices:
+                try:
+                    with LOCK:
+                        out = MANAGER.get(dev).execute(
+                            "display current-configuration | include sysname", wait=1.2)
+                    text = clean(out)
+                    ok = bool(text) and ("sysname" in text or "<" in out)
+                    report.prompts[dev.name] = text[:120]
+                    report.checks.append(env.Check(
+                        f"{dev.name} CLI 握手", ok,
+                        text[:80] or "无有效 VRP 回显 —— 设备可能未启动完成"))
+                except OSError as exc:
+                    report.checks.append(env.Check(
+                        f"{dev.name} CLI 握手", False, str(exc)))
             self._json(report.as_dict())
         elif path == "/api/plans":
             self._json(sorted(p.stem for p in PLAN_DIR.glob("*.json")))
