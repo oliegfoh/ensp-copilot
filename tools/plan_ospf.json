@@ -1,0 +1,58 @@
+{
+  "R1": [
+    "system-view",
+    "ospf 1 router-id 10.0.0.1",
+    "area 0.0.0.0",
+    "network 10.0.0.0 0.0.0.255",
+    "network 10.0.1.0 0.0.0.255",
+    "return"
+  ],
+  "R2": [
+    "system-view",
+    "ospf 1 router-id 10.0.0.2",
+    "area 0.0.0.0",
+    "network 10.0.0.0 0.0.0.255",
+    "network 10.0.1.0 0.0.0.255",
+    "return"
+  ],
+  "R3": [
+    "system-view",
+    "ospf 1 router-id 10.0.0.3",
+    "area 0.0.0.0",
+    "network 10.0.0.0 0.0.0.255",
+    "network 10.0.1.0 0.0.0.255",
+    "return"
+  ],
+  "R4": [
+    "system-view",
+    "ospf 1 router-id 10.0.0.4",
+    "area 0.0.0.0",
+    "network 10.0.0.0 0.0.0.255",
+    "network 10.0.1.0 0.0.0.255",
+    "return"
+  ],
+  "R5": [
+    "system-view",
+    "ospf 1 router-id 10.0.0.5",
+    "area 0.0.0.0",
+    "network 10.0.0.0 0.0.0.255",
+    "network 10.0.1.0 0.0.0.255",
+    "return"
+  ],
+  "R6": [
+    "system-view",
+    "ospf 1 router-id 10.0.0.6",
+    "area 0.0.0.0",
+    "network 10.0.0.0 0.0.0.255",
+    "network 10.0.1.0 0.0.0.255",
+    "return"
+  ],
+  "R7": [
+    "system-view",
+    "ospf 1 router-id 10.0.0.7",
+    "area 0.0.0.0",
+    "network 10.0.0.0 0.0.0.255",
+    "network 10.0.1.0 0.0.0.255",
+    "return"
+  ]
+}

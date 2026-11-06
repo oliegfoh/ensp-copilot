@@ -49,13 +49,22 @@ class Hub:
 
 
 def collect(q: queue.Queue, seconds: float = 1.2) -> str:
-    """Collect bytes from a subscriber until the stream goes quiet."""
+    """Collect bytes from a subscriber until the stream goes quiet.
+
+    The quiescence window used to be a fixed 0.35s. That breaks any command
+    whose output arrives in bursts with gaps longer than 0.35s -- most
+    notably `ping` (default ~2s between replies) and `save` (waits on a
+    [Y/N] prompt). We now scale the grace with the requested wait: short
+    waits stay snappy, long waits (ping/tracert/save) get enough slack to
+    capture every burst without hanging forever on a dead device.
+    """
     buf = b""
     end = time.time() + seconds
+    grace = max(0.4, min(seconds * 0.35, 2.5))
     while time.time() < end:
         try:
             buf += q.get(timeout=0.25)
-            end = time.time() + 0.35
+            end = max(end, time.time() + grace)
         except queue.Empty:
             pass
     return buf.decode("gbk", errors="replace")
