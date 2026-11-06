@@ -147,7 +147,8 @@ class Handler(BaseHTTPRequestHandler):
             if not t:
                 return self._json({"error": "unknown topology"}, 404)
             dark = q.get("dark", ["0"])[0].lower() in ("1", "true", "yes")
-            self._send(render_svg(t, dark=dark).encode("utf-8"), "image/svg+xml; charset=utf-8")
+            self._send(render_svg(t, dark=dark).encode("utf-8"), "image/svg+xml; charset=utf-8",
+                       extra={"Cache-Control": "no-store"})
         elif path == "/api/status":
             name = q.get("topo", [""])[0]
             t = _get_topo(name)
@@ -264,7 +265,13 @@ class Handler(BaseHTTPRequestHandler):
     def _upload(self, body):
         """Accept a .topo as text, store it, and return the parsed inventory."""
         content = body.get("content", "")
-        if not isinstance(content, str) or "<dev " not in content:
+        if not isinstance(content, str):
+            return self._json({"error": "上传内容不是文本"}, 400)
+        # eNSP 导出的 .topo 偶尔混入 NUL 字节（UTF-16 解码不彻底等），
+        # 这里清掉以免 <dev> 被切断导致解析失败。
+        if "\x00" in content:
+            content = content.replace("\x00", "")
+        if "<dev" not in content.lower():
             return self._json({"error": "不是有效的 .topo：缺少 <dev> 标签"}, 400)
         raw = pathlib.Path(str(body.get("name", ""))).stem
         stem = re.sub(r"[^A-Za-z0-9_-]", "-", raw).strip("-")[:64] or "uploaded-topo"

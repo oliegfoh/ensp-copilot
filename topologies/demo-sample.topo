@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<topo version="1.3.00.100">
+  <devices>
+    <dev id="R1" name="R1" model="Router" system_mac="00-11-22-33-44-01" com_port="2000" cx="120.0" cy="150.0" />
+    <dev id="SW1" name="SW1" model="S5700" system_mac="00-11-22-33-44-02" com_port="2001" cx="360.0" cy="90.0" />
+    <dev id="R2" name="R2" model="Router" system_mac="00-11-22-33-44-03" com_port="2002" cx="360.0" cy="230.0" />
+    <dev id="PC1" name="PC1" model="PC" system_mac="00-11-22-33-44-04" cx="600.0" cy="90.0" />
+    <dev id="CLD" name="Cloud" model="Cloud" cx="600.0" cy="230.0" />
+  </devices>
+  <links>
+    <line srcDeviceID="R1" destDeviceID="SW1"><interfacePair srcIndex="0" tarIndex="0" lineName="GE0/0/1" /></line>
+    <line srcDeviceID="R1" destDeviceID="R2"><interfacePair srcIndex="1" tarIndex="0" lineName="GE0/0/2" /></line>
+    <line srcDeviceID="SW1" destDeviceID="PC1"><interfacePair srcIndex="1" tarIndex="0" lineName="GE0/0/1" /></line>
+    <line srcDeviceID="SW1" destDeviceID="CLD"><interfacePair srcIndex="2" tarIndex="0" lineName="GE0/0/2" /></line>
+    <line srcDeviceID="R2" destDeviceID="CLD"><interfacePair srcIndex="1" tarIndex="1" lineName="GE0/0/1" /></line>
+  </links>
+</topo>
